@@ -25,13 +25,27 @@ export class FormController {
     async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Req() req
         , @Query('name') name?: string
         , @Query('deptId') deptId?: string) {
-        if (!deptId) {
-            deptId = req.user.depts[0].id
+        let deptIds = []
+        //首先判断是admin
+        if (req.user.sysRoleId === '1') {
+            if (!deptId)
+                deptIds = []
         }
-        const dept = await Dept.findByPk(deptId)
-        const data = await this.deptService.findNext(DeptTreeDto.byDept(dept))
-        const deptIds = []
-        this.getIds(data, deptIds)
+        //不是admin
+        if (req.user.sysRoleId !== '1') {
+            if (!deptId) {
+                if (req.user.depts && req.user.depts.length !== 0)
+                    deptId = req.user.depts[0].id
+                else
+                    return ResponseUtil.error('您没有所在部门')
+            }
+        }
+        if (deptId){
+            const dept = await Dept.findByPk(deptId)
+            const data = await this.deptService.findNext(DeptTreeDto.byDept(dept))
+            this.getIds(data, deptIds)
+        }
+
         const res = await this.formService.list(pageQueryVo, name, deptIds)
         return ResponseUtil.page(res)
     }
@@ -59,7 +73,7 @@ export class FormController {
 
     @Get('/delete/:formId')
     async delete(@Param('formId')formId: string) {
-        await  this.formService.delete(formId)
+        await this.formService.delete(formId)
         return ResponseUtil.success()
     }
 

@@ -7,6 +7,8 @@ export class AnyExceptionFilter implements ExceptionFilter {
         const response = ctx.getResponse();
         const request = ctx.getRequest();
 
+        if (exception)
+            console.log(exception)
         response
             .status('200')
             .json({

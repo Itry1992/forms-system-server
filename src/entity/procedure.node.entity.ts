@@ -6,7 +6,7 @@ import {FiledPermissionInterface} from "./JSONDataInterface/filedPermission.inte
     timestamps: true,
     underscored: true,
 })
-export default class ProcedureEntity extends Model{
+export default class Procedure extends Model{
     @PrimaryKey
     @Column({
         defaultValue:DataType.UUIDV4

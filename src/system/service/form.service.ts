@@ -14,7 +14,7 @@ export class FormService {
         const include: Includeable[] = []
         if (name)
             whereOptions.name = {[Op.like]: `%${name}%`}
-        if (deptIds)
+        if (deptIds&&deptIds.length!==0)
             include.push({
                 model: Dept,
                 where: {id: {[Op.in]: deptIds}},
