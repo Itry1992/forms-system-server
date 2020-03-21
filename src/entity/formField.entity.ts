@@ -10,8 +10,6 @@ import {
     ForeignKey, BelongsTo
 } from 'sequelize-typescript';
 
-import {ApiHideProperty} from "@nestjs/swagger";
-import {type} from "os";
 import {DefaultValueInterface} from "./JSONDataInterface/defaultValue.interface";
 import {SelectAbleExtraDataInterface} from "./JSONDataInterface/selectAbleExtraData.interface";
 import {LocationExtraSettingInterface} from "./JSONDataInterface/locationExtraSetting.interface";
@@ -87,6 +85,7 @@ export default class FormField extends Model {
     @Column({
         type:DataType.JSONB
     })
+
     deptChooseSetting?:DeptChooseSettingInterface
     @Column
     childrenIds: string

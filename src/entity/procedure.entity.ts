@@ -1,3 +1,4 @@
+
 import {BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
 import Form from "./form.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
@@ -7,6 +8,7 @@ import {ApiHideProperty} from "@nestjs/swagger";
     timestamps: true,
     underscored: true,
 })
+
 export default class Procedure  extends  Model{
 
     @PrimaryKey
@@ -28,6 +30,8 @@ export default class Procedure  extends  Model{
     showLogAble: boolean
     @Column
     submitRule: string
+    
+
 
     @ApiHideProperty()
     @BelongsTo(()=>Form)

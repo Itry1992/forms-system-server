@@ -12,9 +12,11 @@ import {
 
 import {UUIDV4} from 'sequelize';
 import {ApiHideProperty} from "@nestjs/swagger";
+
 import User from "./User.entity";
 import DeptUsersEntity from "./dept.users.entity";
 import App from "./App.entity";
+
 
 @Table({
     timestamps: true,
@@ -51,5 +53,6 @@ export default class Dept extends Model {
     @ApiHideProperty()
     @ForeignKey(() => App)
     appId: string
+
 
 }

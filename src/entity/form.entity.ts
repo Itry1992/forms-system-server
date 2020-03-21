@@ -18,6 +18,7 @@ import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
 import Team from "./team.entity";
 import Dept from "./Dept.entity";
 
+
 @Table({
     // tableName:'newuser',
     timestamps: true,
@@ -36,6 +37,7 @@ export default class Form extends Model {
     name: string
     @Column
     hasCache: boolean
+
 
     @Column
     icon: string
@@ -75,6 +77,7 @@ export default class Form extends Model {
 
     @BelongsTo(() => Dept)
     dept: Dept
+
 
 
 

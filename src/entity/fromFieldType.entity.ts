@@ -1,3 +1,4 @@
+
 import {Column, DataType, Model, PrimaryKey, Table} from "sequelize-typescript";
 import {UUIDV4} from "sequelize";
 import {ProcedureNodeOptionsInterface} from "./JSONDataInterface/procedureNodeOptions.interface";
@@ -5,6 +6,7 @@ import {ProcedureNodeOptionsInterface} from "./JSONDataInterface/procedureNodeOp
     timestamps:true,
     underscored:true
 })
+
 export default class FromFieldType extends Model{
     @PrimaryKey
     @Column({

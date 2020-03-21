@@ -30,7 +30,6 @@ export const databaseConfig: IDatabaseOptions = {
         password: 'admin',
         database: 'huzhan',
         timezone: '+08:00',
-        // benchmark:true,
         dialectOptions: {
             dateStrings: true,
             typeCast:  (field: any, next: any) => { // for reading from database

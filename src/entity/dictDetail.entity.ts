@@ -15,9 +15,8 @@ import {ApiHideProperty} from "@nestjs/swagger";
 import Dict from "./dict.entity";
 
 @Table({
-    // tableName:'newuser',
+
     timestamps: true,
-    // freezeTableName:true,
     underscored: true,
 })
 
@@ -39,6 +38,7 @@ export default class DictDetail extends Model {
     @ApiHideProperty()
     @BelongsTo(() => Dict)
     dict: Dict
+
 
 
 }

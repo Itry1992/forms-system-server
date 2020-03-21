@@ -1,3 +1,4 @@
+
 import {Column, DataType, Model, PrimaryKey, Table} from "sequelize-typescript";
 import {FiledPermissionInterface} from "./JSONDataInterface/filedPermission.interface";
 
@@ -7,6 +8,7 @@ import {FiledPermissionInterface} from "./JSONDataInterface/filedPermission.inte
     underscored: true,
 })
 export default class Procedure extends Model{
+
     @PrimaryKey
     @Column({
         defaultValue:DataType.UUIDV4

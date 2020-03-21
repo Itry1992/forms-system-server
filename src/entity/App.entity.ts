@@ -12,16 +12,14 @@ import {
 
 import {UUIDV4} from 'sequelize';
 import {ApiHideProperty} from "@nestjs/swagger";
-import User from "./User.entity";
-import Team from "./team.entity";
 
+import Team from "./team.entity";
 @Table({
     // tableName:'newuser',
     timestamps: true,
     // freezeTableName:true,
     underscored: true,
 })
-
 export default class App extends Model {
     @PrimaryKey
     @Column({
@@ -42,6 +40,7 @@ export default class App extends Model {
     @ApiHideProperty()
     @BelongsTo(()=>Team)
     team: Team
+
 
 
 

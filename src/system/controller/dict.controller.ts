@@ -49,7 +49,7 @@ export class DictController {
     @Post('/addDetails')
     async addDetails(@Body() data: DictDetail) {
         if (data.dictId) {
-            this.dictService.createDetails(data)
+            return this.dictService.createDetails(data)
         } else
             return ResponseUtil.error('no dictId')
     }

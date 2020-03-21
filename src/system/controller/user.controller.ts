@@ -30,8 +30,6 @@ export class UserController {
 
     @Post('/add')
     async add(@Body()user: User) {
-        // user.depts = [await Dept.findByPk('1')]
-        // user.depts
         return this.userService.create(user)
     }
 

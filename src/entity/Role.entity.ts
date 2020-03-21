@@ -13,8 +13,8 @@ import {
 import {UUIDV4} from 'sequelize';
 import {ApiHideProperty} from "@nestjs/swagger";
 import User from "./User.entity";
-import DeptUsersEntity from "./dept.users.entity";
 import RoleUser from "./role.user.entity";
+
 
 @Table({
     // tableName:'newuser',
@@ -32,6 +32,7 @@ export default class Role extends Model {
 
     @Column
     name: string
+
 
     @Column
     parentId: string
