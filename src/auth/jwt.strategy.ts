@@ -1,8 +1,11 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
+import {ExtractJwt, Strategy} from 'passport-jwt';
+import {PassportStrategy} from '@nestjs/passport';
 import {Injectable, Req, UnauthorizedException} from '@nestjs/common';
 import {jwtConstants} from './constants';
 import {Json} from "sequelize/types/lib/utils";
+import User from "../entity/User.entity";
+import SysRole from "../entity/sys.role.entity";
+import Dept from "../entity/Dept.entity";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,17 +19,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     async validate(payload: any) {
         // console.log(payload)
-        console.log('validate jwt'+ JSON.stringify(payload))
+        console.log('validate jwt' + JSON.stringify(payload))
         // console.log(payload)
-        const  {account, pwd} = payload;
-        // const  user = await User.findOne({where:{
-        //         account,
-        //         pwd
-        //     }});
-        const  user = {}
+        const {account, pwd} = payload;
+        const user = await User.findOne({
+            where: {
+                account,
+                pwd
+            },
+            include: [{
+                model: SysRole
+            }, {model: Dept}]
+        });
         if (!user) {
             throw  new UnauthorizedException();
         }
+        // user.get().js
         return user;
     }
 }

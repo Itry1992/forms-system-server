@@ -17,6 +17,7 @@ import RoleUser from "./role.user.entity";
 import {RpcArgumentsHost} from "@nestjs/common/interfaces";
 import Dept from "./Dept.entity";
 import DeptUsersEntity from "./dept.users.entity";
+import SysRole from "./sys.role.entity";
 
 @Table({
     // tableName:'newuser',
@@ -34,7 +35,7 @@ export default class User extends Model {
 
     @Column
     pwd: string;
-    @Column
+    @Column({unique: true})
     account: string
 
     @Column
@@ -43,14 +44,22 @@ export default class User extends Model {
     @Column
     eMail: string
     @Column
-    weChartId:string
+    weChartId: string
+
+    @Column
+    status: string
 
     @ApiHideProperty()
-    @BelongsToMany(()=>Role, ()=>RoleUser)
+    @BelongsToMany(() => Role, () => RoleUser)
     roles: Role[]
 
     @ApiHideProperty()
-    @BelongsToMany(()=>Dept, ()=>DeptUsersEntity)
+    @BelongsToMany(() => Dept, () => DeptUsersEntity)
     depts: Dept[]
 
+    @ForeignKey(() => SysRole)
+    sysRoleId: string
+    @ApiHideProperty()
+    @BelongsTo(()=>SysRole)
+    sysRole:SysRole
 }

@@ -27,6 +27,7 @@
     "@nestjs/passport": "^6.2.0",
     "@nestjs/platform-express": "^6.10.14",
     "@nestjs/swagger": "latest",
+    "cls-hooked": "^4.2.2",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",
     "pg": "^7.18.2",

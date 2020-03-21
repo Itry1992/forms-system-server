@@ -14,6 +14,7 @@ import {UUIDV4} from 'sequelize';
 import {ApiHideProperty} from "@nestjs/swagger";
 import User from "./User.entity";
 import DeptUsersEntity from "./dept.users.entity";
+import App from "./App.entity";
 
 @Table({
     timestamps: true,
@@ -31,12 +32,24 @@ export default class Dept extends Model {
     @Column
     name: string
 
-    @Column
+    @Column({
+        defaultValue: '0'
+    })
     parentId: string
+
+    @Column
+    hasChildren: boolean
 
     @ApiHideProperty()
     @BelongsToMany(() => User, () => DeptUsersEntity)
     users: User[]
 
+    @ApiHideProperty()
+    @BelongsTo(() => App)
+    app: App
+
+    @ApiHideProperty()
+    @ForeignKey(() => App)
+    appId: string
 
 }

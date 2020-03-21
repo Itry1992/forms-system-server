@@ -15,6 +15,8 @@ import {ApiHideProperty} from "@nestjs/swagger";
 import {ThemeInterface} from "./JSONDataInterface/theme.interface";
 import {LabelInterface} from "./JSONDataInterface/label.interface";
 import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
+import Team from "./team.entity";
+import Dept from "./Dept.entity";
 
 @Table({
     // tableName:'newuser',
@@ -58,14 +60,21 @@ export default class Form extends Model {
     })
     theme: ThemeInterface
     @Column({
-        type:DataType.JSONB
+        type: DataType.JSONB
     })
     label: LabelInterface
 
     @Column({
-        type:DataType.JSONB
+        type: DataType.JSONB
     })
     items: FormItemInterface[];
+
+
+    @ForeignKey(() => Dept)
+    deptId: string
+
+    @BelongsTo(() => Dept)
+    dept: Dept
 
 
 

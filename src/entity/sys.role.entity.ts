@@ -12,16 +12,17 @@ import {
 
 import {UUIDV4} from 'sequelize';
 import {ApiHideProperty} from "@nestjs/swagger";
-import Dict from "./dict.entity";
+import User from "./User.entity";
+import DeptUsersEntity from "./dept.users.entity";
+import RoleUser from "./role.user.entity";
 
 @Table({
-    // tableName:'newuser',
+
     timestamps: true,
-    // freezeTableName:true,
     underscored: true,
 })
 
-export default class DictDetail extends Model {
+export default class SysRole extends Model {
     @PrimaryKey
     @Column({
         defaultValue: UUIDV4,
@@ -30,15 +31,4 @@ export default class DictDetail extends Model {
 
     @Column
     name: string
-
-    @Column
-    value: string
-
-    @ForeignKey(() => Dict)
-    dictId: string
-    @ApiHideProperty()
-    @BelongsTo(() => Dict)
-    dict: Dict
-
-
 }

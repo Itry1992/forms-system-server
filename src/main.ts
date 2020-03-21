@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
 import { AppModule } from './app.module';
 import {logger} from "./common/logger";
+import {AnyExceptionFilter} from "./common/AnyExceptionFilter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,6 +14,7 @@ async function bootstrap() {
       // .addTag('cats')
       .build();
   app.use(logger)
+  app.useGlobalFilters(new AnyExceptionFilter())
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('api', app, document);
   await app.listen(3001);
