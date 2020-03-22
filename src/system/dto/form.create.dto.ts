@@ -6,4 +6,5 @@ export class FormCreateDto {
     type: string
     @ApiHideProperty()
     status? : string
+    deptId?: string
 }

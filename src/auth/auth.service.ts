@@ -2,6 +2,7 @@ import {Injectable, Inject, forwardRef} from '@nestjs/common';
 
 import {JwtService} from '@nestjs/jwt';
 import User from "../entity/User.entity";
+import Dept from "../entity/Dept.entity";
 
 
 @Injectable()
@@ -15,7 +16,10 @@ export class AuthService {
         const user: User = await User.findOne({
             where: {
                 account, pwd
-            }
+            },
+            include:[{
+                model:Dept
+            }]
         });
         if (user) {
             return await this.login({account, pwd}, user);

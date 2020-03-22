@@ -54,7 +54,12 @@ export class FormController {
     @ApiOperation({description: '将表单归属于当前用户所在部门'})
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    async create(@Body() form: FormCreateDto) {
+    async create(@Body() form: FormCreateDto,@Req() request) {
+        if (!form.deptId)
+            if (request.user.depts)
+                form.deptId = request.user.depts[0].id
+            else
+                return  ResponseUtil.error('no dept')
         form.status = '1'
         const data = await this.formService.create(form)
         return ResponseUtil.success(data)
