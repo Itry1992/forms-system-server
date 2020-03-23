@@ -17,9 +17,7 @@ import RoleUser from "./role.user.entity";
 
 
 @Table({
-    // tableName:'newuser',
     timestamps: true,
-    // freezeTableName:true,
     underscored: true,
 })
 
