@@ -24,7 +24,7 @@ export const databaseConfig: IDatabaseOptions = {
     },
     production: {
         dialect: 'postgres',
-        host: 'localhost',
+        host: '120.79.12.65',
         port: 5432,
         username: 'postgres',
         password: 'admin',
