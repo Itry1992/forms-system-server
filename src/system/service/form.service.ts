@@ -43,4 +43,8 @@ export class FormService {
             where: {id}
         })
     }
+
+    async detail(id: string) {
+        return Form.findByPk(id);
+    }
 }

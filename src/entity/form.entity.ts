@@ -15,14 +15,13 @@ import {ApiHideProperty} from "@nestjs/swagger";
 import {ThemeInterface} from "./JSONDataInterface/theme.interface";
 import {LabelInterface} from "./JSONDataInterface/label.interface";
 import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
-import Team from "./team.entity";
 import Dept from "./Dept.entity";
 
 
 @Table({
-    // tableName:'newuser',
+
     timestamps: true,
-    // freezeTableName:true,
+
     underscored: true,
 })
 
@@ -50,21 +49,28 @@ export default class Form extends Model {
     @Column
     sort: number
 
+    @Column
+    submitRule?: number;
+
+    @Column
+    mobileLayout?: 'compact' | 'normal';
+    @Column
+    pcLayout?: 'normal' | 'grid-2';
+
     @Column({
         type: DataType.JSONB
     })
-    submitRule: object
-    @Column
-    unVisibleDataDefaultValueRule: string
+    unVisibleData: object[];
 
     @Column({
         type: DataType.JSONB
     })
     theme: ThemeInterface
+
     @Column({
         type: DataType.JSONB
     })
-    label: LabelInterface
+    tabs: LabelInterface
 
     @Column({
         type: DataType.JSONB
@@ -77,8 +83,6 @@ export default class Form extends Model {
 
     @BelongsTo(() => Dept)
     dept: Dept
-
-
 
 
 }

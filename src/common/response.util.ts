@@ -3,19 +3,19 @@ export class ResponseUtil {
         return {success: true, data, message}
     }
 
-    static page(data:{ rows: any[]; count: number } ,message?: string) {
-        return {success: true, data:data.rows, count:data.count, message}
+    static page(data: { rows: any[]; count: number }, message?: string) {
+        return {success: true, data: data.rows, count: data.count, message}
     }
 
-    static error(message?,error?) {
+    static error(message?, error?) {
         return {success: false, message, error}
     }
 
     static unAuth() {
-        return  {success: false, message:' no auth'};
+        return {success: false, message: ' no auth'};
     }
 
-    static noId() {
-        return  {success: false, message:' no id'};
+    static noId(name?: string) {
+        return {success: false, message: ` no ${name} id`};
     }
 }

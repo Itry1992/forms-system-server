@@ -11,11 +11,17 @@ import {TeamService} from "./service/team.service";
 import {UserDeptController} from "./controller/user.dept.controller";
 import {FormController} from "./controller/form.controller";
 import {FormService} from "./service/form.service";
+import {ProcedureController} from "./controller/procedure.controller";
+import {ProcedureService} from "./service/procedure.service";
+import {FileController} from "./controller/file.controller";
+import {FileService} from "./service/file.service";
 
 
 @Module({
-    controllers:[UserController,DictController,UserDeptController,DeptController,FormController],
-    providers:[UserService,DictService,DeptService,SysAppService,TeamService,FormService]
+    controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
+        ProcedureController, FileController],
+    providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
+        FileService]
 })
 export class SystemModule {
 }

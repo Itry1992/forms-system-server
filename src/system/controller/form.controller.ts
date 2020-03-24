@@ -10,6 +10,7 @@ import {FormService} from "../service/form.service";
 import {ResponseUtil} from "../../common/response.util";
 import Form from "../../entity/form.entity";
 import {FormCreateDto} from "../dto/form.create.dto";
+import {domainToUnicode} from "url";
 
 @Controller('/form')
 @ApiTags('form')
@@ -50,13 +51,19 @@ export class FormController {
         return ResponseUtil.page(res)
     }
 
+    @Get('/detail/:id')
+    async detail(@Param('id') id: string) {
+        return ResponseUtil.success(await  this.formService.detail(id))
+    }
+
     @Post('/add')
-    @ApiOperation({description: '将表单归属于当前用户所在部门'})
+    @ApiOperation({description: '表单将会归属于当前用户所在部门'})
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     async create(@Body() form: FormCreateDto,@Req() request) {
+        // return  ResponseUtil.error()
         if (!form.deptId)
-            if (request.user.depts)
+            if (request.user.depts&&request.user.depts.length!==0)
                 form.deptId = request.user.depts[0].id
             else
                 return  ResponseUtil.error('no dept')

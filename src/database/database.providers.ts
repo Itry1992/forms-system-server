@@ -1,4 +1,3 @@
-
 import {Sequelize} from 'sequelize-typescript';
 import {databaseConfig} from './databaseConfig.interface';
 import * as path from 'path';

@@ -1,7 +1,8 @@
 
-import {BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
+import {BelongsTo, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table} from "sequelize-typescript";
 import Form from "./form.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
+import ProcedureNode from "./procedure.node.entity";
 
 @Table({
 
@@ -30,7 +31,7 @@ export default class Procedure  extends  Model{
     showLogAble: boolean
     @Column
     submitRule: string
-    
+
 
 
     @ApiHideProperty()
@@ -38,5 +39,8 @@ export default class Procedure  extends  Model{
     form:Form
     @ForeignKey(()=>Form)
     formId: string
+
+    @HasMany(()=>ProcedureNode)
+    procedureNodes: ProcedureNode[]
 
 }

@@ -1,7 +1,9 @@
 import {FormItemInterface} from "./FormItem.interface";
 
 export interface LabelInterface {
-    name?: string
+    title?: string;
+    tabId?: string;
+    // name?: string
     sort?:number
     items?: FormItemInterface[];
 }
