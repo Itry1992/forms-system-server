@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Query} from "@nestjs/common";
+import {BadRequestException, Body, Controller, Get, Param, Post, Query} from "@nestjs/common";
 import {ProcedureService} from "../service/procedure.service";
 import {ApiOperation, ApiTags} from "@nestjs/swagger";
 import Procedure from "../../entity/procedure.entity";
@@ -16,32 +16,37 @@ export class ProcedureController {
     //     return ResponseUtil.success(await this.procedureService.getAll(formId))
     // }
 
-    @Post('/create/:formId')
-    async add(@Body() procedure: Procedure, @Param('formId') formId: string) {
-        procedure.status = '1'
+    // @Post('/create/:formId')
+    // async add(@Body() procedure: Procedure, @Param('formId') formId: string) {
+    //     procedure.status = '1'
+    //     procedure.formId = formId
+    //     return ResponseUtil.success(await this.procedureService.create(procedure))
+    // }
+
+    @Post('/updateOrAdd/:formId')
+    @ApiOperation({description: '支持 node and edge 同时传递'})
+    async update(@Body() procedure: Procedure, @Param('formId') formId: string) {
         procedure.formId = formId
-        return ResponseUtil.success(await this.procedureService.create(procedure))
+        console.log(procedure.nodes)
+        if (procedure.nodes) {
+            procedure.nodes.forEach((node) => {
+                if (!node.id)
+                    throw new BadRequestException('has procedure node with no id')
+            })
+        }
+        return ResponseUtil.success(await this.procedureService.upsert(procedure, formId))
+        // return ResponseUtil.create()
     }
 
-    @Post('/update')
-    async update(@Body() procedure: Procedure) {
-        if (procedure.id)
-            return ResponseUtil.success(await this.procedureService.update(procedure))
-        return ResponseUtil.noId('Procedure')
-    }
-
-    @Get('/delete/:id')
-    async delete(@Param('id') id: string) {
-        return ResponseUtil.success(await this.procedureService.delete(id))
+    @Get('/delete/:formId')
+    async delete(@Param('formId') formId: string) {
+        return ResponseUtil.success(await this.procedureService.deleteByFormId(formId))
     }
 
     @Get('/detail/:id')
     @ApiOperation({description: 'isFormId === true 时 返回表单对应的流程'})
-    async detail(@Param('id') id: string, @Query('isFormId') isFormId) {
-        if (isFormId && typeof isFormId === 'string') {
-            isFormId = isFormId === 'true'
-        }
-        return ResponseUtil.success(await this.procedureService.detail(id, isFormId))
+    async detail(@Param('id') id: string) {
+        return ResponseUtil.success(await this.procedureService.detailByFormId(id))
     }
 
     @Post('node/addOrUpdate')
@@ -55,7 +60,7 @@ export class ProcedureController {
 
     @Get('/node/delete/:id')
     async deleteNode(@Param('id') id: string) {
-        return  ResponseUtil.success(await  this.procedureService.deleteNode(id))
+        return ResponseUtil.success(await this.procedureService.deleteNode(id))
     }
 
 }

@@ -1,6 +1,9 @@
-import {BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
+import {BelongsTo, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table} from "sequelize-typescript";
 import {FiledPermissionInterface} from "./JSONDataInterface/filedPermission.interface";
 import Procedure from "./procedure.entity";
+import ProcedureEdge from "./procedure.edge.entity";
+import {UUIDV1} from "sequelize";
+import {ApiHideProperty} from "@nestjs/swagger";
 
 
 @Table({
@@ -8,47 +11,75 @@ import Procedure from "./procedure.entity";
     underscored: true,
 })
 export default class ProcedureNode extends Model {
-
     @PrimaryKey
     @Column({
-        defaultValue: DataType.UUIDV4
+        defaultValue: UUIDV1
     })
     id: string
+
+
     @Column
     name: string
     @Column
-    positionX: number
+    x: number
     @Column
-    positionY: number
+    y: number
+    @Column
+    shape: "start-node" | "user-task-node" | 'end-node' | 'receive-task-node';
+
+    @Column
+    label: string;//text;
+    @Column
+    clazz: 'start'|'end'|'userTask'|'receiveTask'
+
+    @Column
+    dueDate: string
 
     @Column({
-        type: DataType.JSONB
+        type: DataType.ARRAY(DataType.BIGINT)
     })
-    filedPermissions: FiledPermissionInterface[]
+    size: [number, number]; //宽高
+
+    @Column
+    assignType?: string; //审批类型  person 人员，
     @Column({
-        defaultValue: '##@0##defualt',
-        comment: '当位默认值时候未启用'
+        type: DataType.ARRAY(DataType.STRING)
     })
-    submitButton: string
+    assignPerson?: string[]; //审批人员 id
     @Column({
-        defaultValue: '##@0##defualt',
+        type: DataType.ARRAY(DataType.STRING)
     })
-        //暂存按钮
-    stagingButton: string
+    assignDept?: string[]; //审批部门 id
+
     @Column({
-        defaultValue: '##@0##defualt'
+        type: DataType.ARRAY(DataType.STRING)
     })
-    endButton: string
-    @Column({
-        defaultValue: '##@0##defualt'
-    })
-    submitAddPrint: string
+    letter?: string[]; //"itemId:{v}" brief 简报；editable 编辑 visible 可见
+    @Column
+    suggest?: boolean;//文本意见;
+    @Column
+    handWritten?: boolean;//手写签名；
+    @Column
+    submit?: boolean;//提交;
+    @Column
+    submitWithPrint?: boolean;//提交并打印
+    @Column
+    refuse?: boolean;//退回
+    @Column
+    forward?: true;//转交
+    @Column
+    endable?: boolean;//结束流程
+    @Column
+    bluksubmit?: boolean;//批量提交
 
     @ForeignKey(() => Procedure)
     procedureId: string
 
     @BelongsTo(() => Procedure)
     procedure: Procedure
+
+    @HasMany(() => ProcedureEdge)
+    nextEdge: ProcedureEdge[]
 
 
 }

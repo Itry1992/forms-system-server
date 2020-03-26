@@ -56,6 +56,7 @@ export class DictService {
             where: {
                 dictId
             }
+            ,order:[['value', 'ASC']]
         }).then(res => {
             return ResponseUtil.success(res)
         });

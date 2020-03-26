@@ -15,13 +15,19 @@ import {ProcedureController} from "./controller/procedure.controller";
 import {ProcedureService} from "./service/procedure.service";
 import {FileController} from "./controller/file.controller";
 import {FileService} from "./service/file.service";
+import {FormTodoController} from "./controller/form.todo.controller";
+import {FormTodoService} from "./service/form.todo.service";
+import {FormDataController} from "./controller/form.data.controller";
+import {FormDataService} from "./service/form.data.service";
+import {AuthModule} from "../auth/auth.module";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
-        ProcedureController, FileController],
+        ProcedureController, FileController,FormTodoController,FormDataController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
-        FileService]
+        FileService,FormTodoService,FormDataService]
+    ,imports:[AuthModule]
 })
 export class SystemModule {
 }

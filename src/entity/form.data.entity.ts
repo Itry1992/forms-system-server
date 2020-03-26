@@ -3,6 +3,7 @@ import {UUIDV4} from "sequelize";
 import Form from "./form.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
 
+
 @Table({
     timestamps: true,
     freezeTableName: true
@@ -26,17 +27,34 @@ export default class FormData extends Model {
     })
     data: any
 
+    @Column
+    suggest?: string
+
+    @Column
+    handWritten?: string
+
     @CreatedAt
     createTime: Date
 
     @Column
-    submitIp: string
+    crateIp: string
+
+    @Column
+    createUserId: string
 
     @Column
     submitUserId: string
 
     @Column
-    currentProcedureNodeIds: string
+    // 一个节点只有一条数据
+    currentProcedureNodeId: string
+
+
+    @Column
+    dataGroup: string
+
+    @Column
+    endData: 'start'|'end'|'task'
 
 
 }

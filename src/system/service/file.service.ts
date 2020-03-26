@@ -16,15 +16,17 @@ export class FileService {
         if (!Fs.existsSync(parentFile)) {
             Fs.mkdirSync(parentFile);
         }
+        const  rParentPath = `${moment().format('YYMMDD')}`
         // console.log(file);
-        const localPath = parentFile + '/' + uuid.v4() + this.getFileprx(file.originalname);
+        const  rPath = rParentPath +'/' + uuid.v4() + this.getFileprx(file.originalname)
+        const localPath = uploadFile+'/'+ rPath;
         try {
             Fs.writeFileSync(localPath, file.buffer);
         } catch (e) {
             return ResponseUtil.error('创建文件失败')
         }
         return Attachment.create({
-            localPath,
+            localPath:rPath,
             size: file.size,
             fileType: file.mimetype,
             originalName: file.originalname,

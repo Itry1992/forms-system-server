@@ -14,18 +14,9 @@ export  default  class LogProcedure extends  Model{
     })
     id: string
 
-    @ForeignKey(() => User)
-    operatorId: string
+    result: string
 
-    @BelongsTo(()=>User)
-    operator: User
+    action: string
 
-    @ForeignKey(() => FormData)
-    formDataId: string
 
-    @BelongsTo(()=>FormData)
-    formData: FormData
-
-    @Column({type:DataType.JSONB})
-    submitData: any
 }

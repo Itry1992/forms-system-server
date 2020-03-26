@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
+import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
@@ -41,7 +41,7 @@ export class FormController {
                     return ResponseUtil.error('您没有所在部门')
             }
         }
-        if (deptId){
+        if (deptId) {
             const dept = await Dept.findByPk(deptId)
             const data = await this.deptService.findNext(DeptTreeDto.byDept(dept))
             this.getIds(data, deptIds)
@@ -53,20 +53,20 @@ export class FormController {
 
     @Get('/detail/:id')
     async detail(@Param('id') id: string) {
-        return ResponseUtil.success(await  this.formService.detail(id))
+        return ResponseUtil.success(await this.formService.detail(id))
     }
 
     @Post('/add')
     @ApiOperation({description: '表单将会归属于当前用户所在部门'})
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    async create(@Body() form: FormCreateDto,@Req() request) {
+    async create(@Body() form: FormCreateDto, @Req() request) {
         // return  ResponseUtil.error()
         if (!form.deptId)
-            if (request.user.depts&&request.user.depts.length!==0)
+            if (request.user.depts && request.user.depts.length !== 0)
                 form.deptId = request.user.depts[0].id
             else
-                return  ResponseUtil.error('no dept')
+                return ResponseUtil.error('no dept')
         form.status = '1'
         const data = await this.formService.create(form)
         return ResponseUtil.success(data)
@@ -78,6 +78,12 @@ export class FormController {
     @Post('/update/:formId')
     // @ApiBearerAuth
     async update(@Body()form: Form, @Param('formId')formId: string) {
+        if (form.items) {
+            form.items.forEach((item) => {
+                if (!item.id)
+                    throw new BadRequestException(' has item with no id')
+            })
+        }
         await this.formService.update(formId, form)
         return ResponseUtil.success()
     }

@@ -1,11 +1,13 @@
-import {Controller, Get, Param, Post, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
+import {Controller, Get, Param, Post, Query, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
 import * as Fs from "fs";
 import {Response} from 'express';
 import {FileService} from "../service/file.service";
-import {ApiConsumes, ApiTags} from "@nestjs/swagger";
+import {ApiConsumes, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {FileInterceptor} from "@nestjs/platform-express";
 import Attachment from "../../entity/attachment.entity";
 import {ResponseUtil} from "../../common/response.util";
+import {Op} from "sequelize";
+import {FileUpLoadUrl} from "../../common/file.upload.url";
 
 @Controller('/file')
 @ApiTags('file')
@@ -17,7 +19,9 @@ export class FileController {
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(FileInterceptor('file'))
     async addFile(@UploadedFile() file: any) {
-        return this.fileService.addFile(file)
+        if (file)
+            return this.fileService.addFile(file)
+        else return ResponseUtil.error('no file')
     }
 
     @Get('get/:id')
@@ -27,8 +31,11 @@ export class FileController {
         // res.set('Content-Disposition',`attachment; filename=${entity.originalName}`)
         res.set('Content-Length', `${entity.size}`)
 
-
-        const rs = Fs.createReadStream(entity.localPath)
+        let path = entity.localPath
+        if (!path.startsWith(FileUpLoadUrl.url)) {
+            path = FileUpLoadUrl.url + '/' + entity.localPath
+        }
+        const rs = Fs.createReadStream(path)
         rs.on('data', chunk => {
             res.write(chunk, 'binary')
         })
@@ -41,7 +48,7 @@ export class FileController {
                 res.status(200)
                     .json({
                         success: false,
-                        message: '对应文件已被删除',
+                        message: '未找到对应文件',
                     });
             } else
                 res.status(200)
@@ -56,5 +63,17 @@ export class FileController {
         // res.
         // res.body.pipeTo(Fs.createReadStream(entity.localPath))
         // file.
+    }
+
+    @Get('/delete')
+    @ApiOperation({
+        description: 'ids 使用‘,’ 分割'
+    })
+    async delete(@Query('ids') ids: string) {
+        return ResponseUtil.success(await Attachment.destroy({
+            where: {
+                id: {[Op.in]: ids.split(',')}
+            }
+        }))
     }
 }

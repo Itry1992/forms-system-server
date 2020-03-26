@@ -3,6 +3,8 @@ import {BelongsTo, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Tab
 import Form from "./form.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
 import ProcedureNode from "./procedure.node.entity";
+import {FlowModelInterface} from "./JSONDataInterface/flow.model.interface";
+import ProcedureEdge from "./procedure.edge.entity";
 
 @Table({
 
@@ -23,16 +25,10 @@ export default class Procedure  extends  Model{
     status: string
     @Column
     name: string
-    @Column
-    remindMethod: string
-    @Column
-    withdrawAble: boolean
-    @Column
-    showLogAble: boolean
-    @Column
-    submitRule: string
-
-
+    @Column({
+        type:DataType.JSONB
+    })
+    flowModel :FlowModelInterface
 
     @ApiHideProperty()
     @BelongsTo(()=>Form)
@@ -41,6 +37,9 @@ export default class Procedure  extends  Model{
     formId: string
 
     @HasMany(()=>ProcedureNode)
-    procedureNodes: ProcedureNode[]
+    nodes: ProcedureNode[]
+
+    @HasMany(()=>ProcedureEdge)
+    edges: ProcedureEdge[]
 
 }
