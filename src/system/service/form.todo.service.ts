@@ -21,6 +21,7 @@ export class FormTodoService {
             where: {
                 formId,
                 formDataGroup: dataGroup,
+                status:'1',
                 ...userOpt
             },
             include: [{

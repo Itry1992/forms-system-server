@@ -33,6 +33,9 @@ export default class FormTodo extends Model {
     formId: string
 
     @Column
+    preTodoId: string
+
+    @Column
     formDataGroup: string
 
     @ForeignKey(() => ProcedureEdge)

@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Query, Req} from "@nestjs/common";
+import {Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
 import {ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
@@ -11,16 +11,24 @@ import User from "../../entity/User.entity";
 import Dept from "../../entity/Dept.entity";
 import {async} from "rxjs/internal/scheduler/async";
 import {FormTodoService} from "../service/form.todo.service";
+import {ProcedureService} from "../service/procedure.service";
+import FormTodo from "../../entity/form.todo.entity";
+import {FormService} from "../service/form.service";
+import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
+import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
+import {JwtAuthGuard} from "../../auth/auth.guard";
 
 @Controller('/formData')
 @ApiTags('formData')
 export class FormDataController {
     constructor(private readonly formDataService: FormDataService,
                 private readonly authService: AuthService,
-                private readonly formTodoService: FormTodoService) {
+                private readonly formTodoService: FormTodoService,
+                private readonly formService: FormService) {
     }
 
     @Get('/list/:formId')
+    @ApiOperation({description: '流程表单不会返回未审核数据'})
     async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Param('formId')formId: string) {
         const data = await this.formDataService.list(pageQueryVo, formId)
         return ResponseUtil.success(data)
@@ -46,7 +54,7 @@ export class FormDataController {
 
     @Post('/submit/:formId')
     @ApiOperation({
-        description: '提交的数据会进入流程处理 流程表单请勿丢失dataGroup字段  data字段示例 ： {\n' +
+        description: '提交的数据会进入流程处理 审批流程时候请包含todoId  data字段示例 ： {\n' +
             '    "itemId":"a",\n' +
             '    "itemId2":[\n' +
             '        "1",\n' +
@@ -58,7 +66,7 @@ export class FormDataController {
             '    }\n' +
             '}'
     })
-    async submit(@Body() data: FormData, @Param('formId') formId: string, @Req() req: Request) {
+    async submit(@Body() data: FormDataSubmitDto, @Param('formId') formId: string, @Req() req: Request) {
         const header = req.header('Authorization')
         let user = undefined
         if (header) {
@@ -74,17 +82,28 @@ export class FormDataController {
                 }]
             })
         }
-        await this.formDataService.submit(data, formId, req.ip, user)
-        return ResponseUtil.success()
+        const result = await this.formDataService.submit(data, formId, req.ip, user)
+        return ResponseUtil.success(result)
     }
-
-    // @P
 
     @Get('/toSubmit/:todoId')
     @ApiOperation({description: '入口代办事项 参数为代办事项id , 返回上一节点表单的的值'})
     async toSubmit(@Param('todoId') todoId: string) {
-        const todo = await this.formTodoService.findByPK(todoId)
-        return ResponseUtil.success(await this.formDataService.findByTodo(todo))
+        const todo: FormTodo = await this.formTodoService.findByPK(todoId)
+        const formData: FormData = await this.formDataService.findByTodo(todo)
+        const item = await this.formService.toSubmit(todo.formId, todo.edge.target)
+        // formData.data =
+        const brief: any = {}
+        item.briefItems.forEach((item: FormItemInterface) => {
+            brief[item.id] = {label: item.title, data: formData.data[item.id]}
+        })
+        return {success: true, data: {brief, item: item.items, data: formData.data, todoId}}
+    }
+
+    @Get('/reBack/:todoId')
+    @UseGuards(JwtAuthGuard)
+    async reBack(@Param('todoId') todoId: string, @Req() req) {
+        return ResponseUtil.success(await this.formDataService.reBack(todoId, req.user))
     }
 
 }

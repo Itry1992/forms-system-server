@@ -5,6 +5,11 @@ import ProcedureEdge from "./procedure.edge.entity";
 import {UUIDV1} from "sequelize";
 import {ApiHideProperty} from "@nestjs/swagger";
 
+interface i {
+    id: string,
+    visible: boolean
+    edit:boolean
+}
 
 @Table({
     timestamps: true,
@@ -54,7 +59,10 @@ export default class ProcedureNode extends Model {
     @Column({
         type: DataType.ARRAY(DataType.STRING)
     })
-    letter?: string[]; //"itemId:{v}" brief 简报；editable 编辑 visible 可见
+    letter?: string[]; //"itemId:{brief}" brief 简报；editable 编辑 visible 可见
+    // itemId:brief,
+    // a:c
+
     @Column
     suggest?: boolean;//文本意见;
     @Column

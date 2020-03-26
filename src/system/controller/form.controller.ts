@@ -88,6 +88,12 @@ export class FormController {
         return ResponseUtil.success()
     }
 
+    @Get('/form/toSubmit/:id')
+    @ApiOperation({description:'初次提交获取itmes'})
+    async toSubmit(@Param('id') id: string) {
+        return  ResponseUtil.success((await  this.formService.toSubmit(id)).items)
+    }
+
 
     @Get('/delete/:formId')
     async delete(@Param('formId')formId: string) {
