@@ -1,5 +1,5 @@
 import {Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
-import {ApiOperation, ApiTags} from "@nestjs/swagger";
+import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import {FormDataService} from "../service/form.data.service";
@@ -90,20 +90,32 @@ export class FormDataController {
     @ApiOperation({description: '入口代办事项 参数为代办事项id , 返回上一节点表单的的值'})
     async toSubmit(@Param('todoId') todoId: string) {
         const todo: FormTodo = await this.formTodoService.findByPK(todoId)
+        // console.log(todo)
         const formData: FormData = await this.formDataService.findByTodo(todo)
-        const item = await this.formService.toSubmit(todo.formId, todo.edge.target)
-        // formData.data =
-        const brief: any = {}
-        item.briefItems.forEach((item: FormItemInterface) => {
-            brief[item.id] = {label: item.title, data: formData.data[item.id]}
-        })
-        return {success: true, data: {brief, item: item.items, data: formData.data, todoId}}
+        const res = await this.formService.toSubmit(todo.formId, todo.edge.target)
+        res.form.items = res.items
+        return {success: true, data: { form: res.form, data: formData.data, todoId, suggest: res.suggest}}
     }
 
     @Get('/reBack/:todoId')
     @UseGuards(JwtAuthGuard)
     async reBack(@Param('todoId') todoId: string, @Req() req) {
         return ResponseUtil.success(await this.formDataService.reBack(todoId, req.user))
+    }
+
+
+    @Get('/toHistory/:todoId')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({description: '获取已完成代办事项对应的id'})
+    async history(@Param('todoId') todoId ) {
+        // todo 具体的数据
+        const todo: FormTodo = await this.formTodoService.findByPK(todoId)
+        const res = await this.formService.toSubmit(todo.formId, todo.edge.target)
+        //data
+        const  formData  = await  this.formDataService.findByTodo(todo,todo.edge.target)
+        return {success: true, data: { form: res.form, data: formData.data, todoId, suggest: res.suggest}}
+
     }
 
 }

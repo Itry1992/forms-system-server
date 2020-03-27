@@ -20,11 +20,12 @@ import {FormTodoService} from "./service/form.todo.service";
 import {FormDataController} from "./controller/form.data.controller";
 import {FormDataService} from "./service/form.data.service";
 import {AuthModule} from "../auth/auth.module";
+import {FormLogController} from "./controller/form.log.controller";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
-        ProcedureController, FileController,FormTodoController,FormDataController],
+        ProcedureController, FileController,FormTodoController,FormDataController,FormLogController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
         FileService,FormTodoService,FormDataService]
     ,imports:[AuthModule]

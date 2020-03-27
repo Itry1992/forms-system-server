@@ -88,10 +88,13 @@ export class FormController {
         return ResponseUtil.success()
     }
 
-    @Get('/form/toSubmit/:id')
+    @Get('/toSubmit/:id')
     @ApiOperation({description:'初次提交获取itmes'})
     async toSubmit(@Param('id') id: string) {
-        return  ResponseUtil.success((await  this.formService.toSubmit(id)).items)
+        const  res = await  this.formService.toSubmit(id)
+        const  form = res.form
+        form.items = res.items
+        return  ResponseUtil.success(form)
     }
 
 

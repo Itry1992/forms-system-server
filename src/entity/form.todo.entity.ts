@@ -1,6 +1,7 @@
-import {BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
+import {BelongsTo, Column, CreatedAt, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
 import {UUIDV1} from "sequelize";
 import ProcedureEdge from "./procedure.edge.entity";
+import {Col} from "sequelize/types/lib/utils";
 
 @Table({
     underscored: true,
@@ -48,6 +49,22 @@ export default class FormTodo extends Model {
     @Column
     actionUrl: string
 
+    @Column({
+        type: DataType.JSONB
+    })
+    briefData: any
+
     @Column
-    status: '1'|'2'
+    nodeName: string
+
+    @Column
+    formTitle: string
+
+    @Column
+    createUser: string
+    @Column
+    status: '1' | '2'
+
+    // @CreatedAt
+    // createdAt : Date
 }

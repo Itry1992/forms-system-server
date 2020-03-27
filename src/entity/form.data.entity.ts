@@ -6,7 +6,7 @@ import {ApiHideProperty} from "@nestjs/swagger";
 
 @Table({
     timestamps: true,
-    freezeTableName: true
+    underscored:true
 })
 export default class FormData extends Model {
     @PrimaryKey

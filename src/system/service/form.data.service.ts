@@ -107,6 +107,7 @@ export class FormDataService {
                     formData.crateIp = oldData.crateIp
                     formData.createTime = oldData.createTime
                     formData.createUserId = oldData.createUserId
+                    // formData.dataGroup  = oldData.dataGroup
                 }
                 formData.suggest = dataDto.suggest
                 // formData.handWritten = dataDto.
@@ -115,9 +116,10 @@ export class FormDataService {
 
             }
             logData.nodeId = formData.currentProcedureNodeId
-            logData.submitUserId = user.id
+            if (user)
+                logData.submitUserId = user.id
 
-            return await this.flowWork(procedure, formData, dataDto, logData, formId, user)
+            return await this.flowWork(procedure, formData, dataDto, logData, form, user)
 
         } else {
             //非流程节点
@@ -134,12 +136,12 @@ export class FormDataService {
     }
 
 
-    async findByTodo(todo: FormTodo) {
+    async findByTodo(todo: FormTodo, nodeId?: string) {
         return FormData.findOne({
             where: {
                 formId: todo.formId,
                 dataGroup: todo.formDataGroup,
-                currentProcedureNodeId: todo.edge.source
+                currentProcedureNodeId: nodeId || todo.edge.source
             }
         });
     }
@@ -195,7 +197,7 @@ export class FormDataService {
         return undefined;
     }
 
-    private async flowWork(procedure, formData, dataDto, logData, formId, user) {
+    private async flowWork(procedure, formData, dataDto, logData, form: Form, user) {
         //校验流转规则 确定接下来的节点 并且生成对下一个节点流转人的代办事项
         // 提交节点的对应的流转规则
         const procedureEdges = procedure.edges.filter((edge) => {
@@ -211,7 +213,7 @@ export class FormDataService {
             const customPassEdge: ProcedureEdge[] = []
             procedureEdges.forEach((edge) => {
                 //验证流转规则
-                if (edge.flow.conditiontype === 'custom') {
+                if (edge.flow.conditiontype === 'custom' && edge.flow.conditions) {
                     //自定义 规则校验 对提交数据进行校验
                     const firstUnPassCondition = edge.flow.conditions.find((condition) => {
                         switch (condition.conditionsRule) {
@@ -271,19 +273,46 @@ export class FormDataService {
                 if (targetNode.clazz === 'end') {
                     // FormData.sequelize.transaction(t => {})
                     //进入流程结束
-                    await this.endFlow(formId, formData.dataGroup, formData.currentProcedureNodeId, formData)
+                    await this.endFlow(form.id, formData.dataGroup, formData.currentProcedureNodeId, formData)
                     return '流程结束';
                 }
-                toDo.push({
-                    status: '1',
-                    targetUserId: targetNode && targetNode.assignPerson,
-                    targetDeptId: targetNode && targetNode.assignDept,
-                    formId,
-                    groupId: formData.dataGroup,
-                    //edge
-                    edgeId: edge.id,
-                    preTodoId: dataDto.todoId || '0'
-                })
+                // if (targetNode.)
+                //组装简报
+                const briefData: any = {}
+                if (targetNode.letter && targetNode.letter.length !== 0)
+                    targetNode.letter.filter((s) => {
+                        return s.includes(':brief')
+                    }).map((s) => {
+                        const id = s.replace(':brief', '')
+                        const item = form.items.find((i) => {
+                            return i.id === id
+                        })
+                        if (item)
+                            briefData[id] = {
+                                label: item.title,
+                                value: formData[id]
+                            }
+                        else
+                            console.log('unfindId', id)
+                    })
+
+
+                const type =
+                    toDo.push({
+                        status: '1',
+                        targetUserId: targetNode && targetNode.assignPerson,
+                        targetDeptId: targetNode && targetNode.assignDept,
+                        formId: form.id,
+                        formTitle: form.name,
+                        formDataGroup: formData.dataGroup,
+                        createUser: user && user.name || '',
+                        briefData,
+                        nodeName: targetNode.label,
+                        type: targetNode.clazz,
+                        //edge
+                        edgeId: edge.id,
+                        preTodoId: dataDto.todoId || '0'
+                    })
             }
             logData.result = '处理成功'
 

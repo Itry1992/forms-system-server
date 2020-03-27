@@ -28,34 +28,33 @@ export class ProcedureService {
             delete procedure.id
         // console.log(procedure.id)
         return Procedure.sequelize.transaction(t => {
-            return Procedure.upsert(procedure).then((res) => {
-                if (res.id)
-                    return Promise.all([
-                        ProcedureNode.destroy({
-                            where: {procedureId: res.id}
-                        }),
-                        ProcedureEdge.destroy({
-                            where: {procedureId: res.id}
-                        })
-                    ]).then(() => {
-                        if (procedure.nodes && procedure.nodes.length !== 0) {
-                            procedure.nodes.forEach((node) => {
-                                node.procedureId = res.id
-                            })
-                            return ProcedureNode.bulkCreate(procedure.nodes).then(() => {
-                                if (procedure.edges && procedure.edges.length !== 0) {
-                                    procedure.edges.forEach((e) => {
-                                        e.procedureId = res.id
-                                    })
-                                    return ProcedureEdge.bulkCreate(procedure.edges).then(() => {
-                                        return res
-                                    })
-                                }
-                                return res
-                            })
-                        }
-                        return res
+            return Procedure.upsert(procedure, {returning: true}).then((res) => {
+                return Promise.all([
+                    ProcedureNode.destroy({
+                        where: {procedureId: res[0].id}
+                    }),
+                    ProcedureEdge.destroy({
+                        where: {procedureId: res[0].id}
                     })
+                ]).then(() => {
+                    if (procedure.nodes && procedure.nodes.length !== 0) {
+                        procedure.nodes.forEach((node) => {
+                            node.procedureId = res[0].id
+                        })
+                        return ProcedureNode.bulkCreate(procedure.nodes).then(() => {
+                            if (procedure.edges && procedure.edges.length !== 0) {
+                                procedure.edges.forEach((e) => {
+                                    e.procedureId = res[0].id
+                                })
+                                return ProcedureEdge.bulkCreate(procedure.edges).then(() => {
+                                    return res[0]
+                                })
+                            }
+                            return res[0]
+                        })
+                    }
+                    return res[0]
+                })
 
             })
         })

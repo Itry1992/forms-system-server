@@ -30,22 +30,27 @@ export class FormTodoService {
         })
     }
 
-    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string) {
+    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string , type: string, currentUserDeal?: boolean) {
         const userOpt = this.getUserOpt(user)
         const statusOpt: any = {}
         if (status === '1')
             statusOpt.status = '1'
         if (status === '2') {
             statusOpt.status = '2'
+        }
+        if (currentUserDeal===true && user) {
+            statusOpt.status = '2'
             statusOpt.dealUserId = user.id
         }
         return FormTodo.findAndCountAll({
             where: {
+                type:type,
                 ...userOpt,
                 ...statusOpt
             },
             limit: pageQueryVo.getSize(),
-            offset: pageQueryVo.offset()
+            offset: pageQueryVo.offset(),
+            order:[['createdAt','DESC']]
         })
     }
 

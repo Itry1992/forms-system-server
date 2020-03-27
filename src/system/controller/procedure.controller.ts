@@ -11,27 +11,25 @@ export class ProcedureController {
     constructor(private readonly procedureService: ProcedureService) {
     }
 
-    // @Get('/allByFormId/:formId')
-    // async getAll(@Param('formId') formId: string) {
-    //     return ResponseUtil.success(await this.procedureService.getAll(formId))
-    // }
-
-    // @Post('/create/:formId')
-    // async add(@Body() procedure: Procedure, @Param('formId') formId: string) {
-    //     procedure.status = '1'
-    //     procedure.formId = formId
-    //     return ResponseUtil.success(await this.procedureService.create(procedure))
-    // }
-
     @Post('/updateOrAdd/:formId')
     @ApiOperation({description: '支持 node and edge 同时传递'})
     async update(@Body() procedure: Procedure, @Param('formId') formId: string) {
         procedure.formId = formId
-        console.log(procedure.nodes)
+        if (!procedure.nodes || !procedure.edges) {
+            throw new BadRequestException('请设置节点 和 流转条件')
+        }
         if (procedure.nodes) {
             procedure.nodes.forEach((node) => {
                 if (!node.id)
                     throw new BadRequestException('has procedure node with no id')
+                if (node.clazz !== 'end')
+                    if (!node.letter || node.letter.length === 0) {
+                        throw  new BadRequestException(`${node.label} 没有可见/可编辑字段`)
+                    }
+                if (node.clazz === 'userTask' || node.clazz === 'receiveTask')
+                    if (!node.assignPerson && !node.assignDept) {
+                        throw new BadRequestException(`${node.label} 没有审批人`)
+                    }
             })
         }
         return ResponseUtil.success(await this.procedureService.upsert(procedure, formId))

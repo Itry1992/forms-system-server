@@ -1,4 +1,4 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, Injectable} from "@nestjs/common";
 import {Op} from "sequelize";
 import Form from "../../entity/form.entity";
 import Team from "../../entity/team.entity";
@@ -53,50 +53,66 @@ export class FormService {
         return Form.findByPk(id);
     }
 
-    async toSubmit(id: string,nodeId?: string) {
+    async toSubmit(id: string, nodeId?: string) {
         const form: Form = await Form.findByPk(id)
+        if (!form)
+            throw new BadRequestException('对应表单不存在')
         if (form.type === 'flow') {
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
             if (procedure && procedure.nodes) {
-                const startNode = procedure.nodes.find((node) => {
+                const targetNode = procedure.nodes.find((node) => {
                     if (!nodeId)
+                        //如果为传递nodeid  node = start
                         return node.clazz === 'start'
                     return node.id === nodeId
                 })
-                const visibleItem = startNode.letter.filter((s) => {
-                    return  s.includes('visible')
-                }).map((s) => {
-                    const item = form.items.find((item) => {
-                        return item.id === s.replace(':visible', '')
+                if (!targetNode)
+                    throw new BadRequestException('找不到初始节点，请联系表单管理人员')
+                const letter = targetNode.letter
+                const visibleItem = form.items.filter((i) => {
+                    const find = letter.find((s) => {
+                        return s === `${i.id}:visible` ||  s === `${i.id}:editable`
                     })
-                    item.visible =  true
-                    //editAble =>
-                    const findEditable = startNode.letter.find((s)=>{
-                        return s === item.id+':editable'
+                    return !!find
+                }).map((item) => {
+                    item.visible = true
+                    item.enable = !!letter.find(s=>{
+                        return  s === `${item.id}:editable`
                     })
-                    item.enable = !!findEditable
                     return item
                 })
+                // const visibleItem = targetNode.letter.filter((s) => {
+                //     return s.includes(':visible')
+                // }).map((s) => {
+                //     const item = form.items.find((item) => {
+                //         return item.id === s.replace(':visible', '')
+                //     })
+                //     item.visible = true
+                //     //editAble =>
+                //     const findEditable = targetNode.letter.find((s) => {
+                //         return s === item.id + ':editable'
+                //     })
+                //     item.enable = !!findEditable
+                //     return item
+                // })
 
-                const  briefItems = startNode.letter.filter((s)=>{
+                const briefItems = targetNode.letter.filter((s) => {
                     return s.includes(':brief')
-                }).map((s) =>{
-                    return form.items.find((i) =>{
-                        return i.id === s.replace(':brief','')
-                    } )
+                }).map((s) => {
+                    return form.items.find((i) => {
+                        return i.id === s.replace(':brief', '')
+                    })
                 })
-
-                return {items:visibleItem,briefItems}
-
-
-
+                return {form, items: visibleItem, briefItems, suggest: targetNode.suggest}
+            } else {
+                throw new BadRequestException('找不到流程节点，请完善流程')
             }
 
         } else {
-            const  items = form.items.filter((item) => {
+            const items = form.items.filter((item) => {
                 return item.visible || item.enable
             })
-            return  {items}
+            return {form, items}
         }
 
     }

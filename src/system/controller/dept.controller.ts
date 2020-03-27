@@ -70,7 +70,12 @@ export class DeptController {
     }
 
     // @Get('/')
-
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({description:'当前用户所在部门树'})
+    async allTreeByUser() {
+        //todo...
+    }
 
 
 }
