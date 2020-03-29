@@ -27,7 +27,7 @@ export class DeptController {
     @Get('/list/deptTree')
     @ApiOperation({description: 'name 仅对一级节点生效'})
     async listTree(@Query('name') name?: string) {
-        const data = await this.deptService.listTree( null,name)
+        const data = await this.deptService.listTree(null, name)
         return ResponseUtil.page(data)
     }
 
@@ -52,9 +52,9 @@ export class DeptController {
     @Get('/delete/:id')
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    async delete(@Param('id')id: string,@Req() req) {
-        const data = await this.deptService.delete(id,req);
-        return ResponseUtil.success(data+'')
+    async delete(@Param('id')id: string, @Req() req) {
+        const data = await this.deptService.delete(id, req);
+        return ResponseUtil.success(data + '')
     }
 
     @Get('/treeByUser')
@@ -69,12 +69,15 @@ export class DeptController {
         return ResponseUtil.success(tree)
     }
 
-    // @Get('/')
+    @Get('/usersTree')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({description:'当前用户所在部门树'})
-    async allTreeByUser() {
-        //todo...
+    @ApiOperation({description: '当前用户所在部门树'})
+    async allTreeByUser(@Req() req) {
+        const dept: Dept = req.user.depts[0]
+        const root = await this.deptService.findRoot(dept)
+        const tree = await this.deptService.findNext(DeptTreeDto.byDept(root))
+        return ResponseUtil.success(tree)
     }
 
 

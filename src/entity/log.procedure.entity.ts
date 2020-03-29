@@ -3,6 +3,7 @@ import {UUIDV1, UUIDV4} from "sequelize";
 import User from "./User.entity";
 import FormData from "./form.data.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
+import ProcedureNode from "./procedure.node.entity";
 
 @Table({
     timestamps: true,
@@ -21,6 +22,8 @@ export default class LogProcedure extends Model {
     @Column
     action: string
 
+    @Column
+    resultStatus: 'success' | 'error' | 'end' | 'reBack'
 
     @Column
     formId: string
@@ -28,8 +31,10 @@ export default class LogProcedure extends Model {
     @Column
     groupId: string
 
-    @Column
+    @ForeignKey(() => ProcedureNode)
     nodeId: string
+    @BelongsTo(() => ProcedureNode)
+    node: ProcedureNode
 
     @ForeignKey(() => User)
     @Column

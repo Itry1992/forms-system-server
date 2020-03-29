@@ -11,7 +11,6 @@ import {
 } from 'sequelize-typescript';
 
 import {UUIDV4} from 'sequelize';
-import {ApiHideProperty} from "@nestjs/swagger";
 import {ThemeInterface} from "./JSONDataInterface/theme.interface";
 import {LabelInterface} from "./JSONDataInterface/label.interface";
 import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
@@ -84,5 +83,18 @@ export default class Form extends Model {
     @BelongsTo(() => Dept)
     dept: Dept
 
+    //发布可用人员
+    @Column({
+        type:DataType.ARRAY(DataType.STRING)
+    })
+    writeAbleUserId:string[]
 
+    //
+    @Column({
+        type:DataType.ARRAY(DataType.STRING)
+    })
+    writeAbleDeptId : string[]
+
+    @Column
+    password: string
 }

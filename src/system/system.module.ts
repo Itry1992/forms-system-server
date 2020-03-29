@@ -21,13 +21,15 @@ import {FormDataController} from "./controller/form.data.controller";
 import {FormDataService} from "./service/form.data.service";
 import {AuthModule} from "../auth/auth.module";
 import {FormLogController} from "./controller/form.log.controller";
+import {FormCommentController} from "./controller/form.comment.controller";
+import {XlsxService} from "./service/xlsx.service";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
-        ProcedureController, FileController,FormTodoController,FormDataController,FormLogController],
+        ProcedureController, FileController,FormTodoController,FormDataController,FormLogController,FormCommentController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
-        FileService,FormTodoService,FormDataService]
+        FileService,FormTodoService,FormDataService,XlsxService]
     ,imports:[AuthModule]
 })
 export class SystemModule {

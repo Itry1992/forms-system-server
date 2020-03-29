@@ -2,11 +2,12 @@ import {BelongsTo, Column, CreatedAt, DataType, ForeignKey, Model, PrimaryKey, T
 import {UUIDV4} from "sequelize";
 import Form from "./form.entity";
 import {ApiHideProperty} from "@nestjs/swagger";
+import ProcedureNode from "./procedure.node.entity";
 
 
 @Table({
     timestamps: true,
-    underscored:true
+    underscored: true
 })
 export default class FormData extends Model {
     @PrimaryKey
@@ -30,7 +31,9 @@ export default class FormData extends Model {
     @Column
     suggest?: string
 
-    @Column
+    @Column({
+        type: DataType.TEXT
+    })
     handWritten?: string
 
     @CreatedAt
@@ -43,18 +46,33 @@ export default class FormData extends Model {
     createUserId: string
 
     @Column
+    createUserName: string
+
+    @Column
     submitUserId: string
 
     @Column
-    // 一个节点只有一条数据
+    submitUserName: string
+
+    @ForeignKey(() => ProcedureNode)
+        // 一个节点只有一条数据
     currentProcedureNodeId: string
 
+    @BelongsTo(() => ProcedureNode)
+    currentProcedureNode: ProcedureNode
+
+
+    @Column
+    todoId: string
 
     @Column
     dataGroup: string
 
     @Column
-    endData: 'start'|'end'|'task'
+    dataGroupStatus: string
+
+    @Column
+    endData: 'start' | 'end' | 'task'
 
 
 }

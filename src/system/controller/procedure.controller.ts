@@ -4,6 +4,9 @@ import {ApiOperation, ApiTags} from "@nestjs/swagger";
 import Procedure from "../../entity/procedure.entity";
 import {ResponseUtil} from "../../common/response.util";
 import ProcedureNode from "../../entity/procedure.node.entity";
+import FormData from "../../entity/form.data.entity";
+import FormTodo from "../../entity/form.todo.entity";
+import {ArrayUtil} from "../../common/util/array.util";
 
 @Controller('/procedure')
 @ApiTags('流程以及流程节点')
@@ -14,6 +17,17 @@ export class ProcedureController {
     @Post('/updateOrAdd/:formId')
     @ApiOperation({description: '支持 node and edge 同时传递'})
     async update(@Body() procedure: Procedure, @Param('formId') formId: string) {
+        //检验是否有表单数据
+        const todo = await FormTodo.findOne({
+            where: {
+                formId: formId
+            }
+        })
+        if (todo) {
+            throw new BadRequestException('此表单已有数据，无法修改流程')
+        }
+
+
         procedure.formId = formId
         if (!procedure.nodes || !procedure.edges) {
             throw new BadRequestException('请设置节点 和 流转条件')
@@ -27,9 +41,15 @@ export class ProcedureController {
                         throw  new BadRequestException(`${node.label} 没有可见/可编辑字段`)
                     }
                 if (node.clazz === 'userTask' || node.clazz === 'receiveTask')
-                    if (!node.assignPerson && !node.assignDept) {
+                    if (ArrayUtil.isNull(node.assignPerson) && ArrayUtil.isNull(node.assignDept)) {
                         throw new BadRequestException(`${node.label} 没有审批人`)
                     }
+                if (node.clazz==='end') {
+                    node.assignDept= []
+                    node.assignPerson = []
+                    if (!node.letter)
+                        node.letter = []
+                }
             })
         }
         return ResponseUtil.success(await this.procedureService.upsert(procedure, formId))
@@ -38,6 +58,15 @@ export class ProcedureController {
 
     @Get('/delete/:formId')
     async delete(@Param('formId') formId: string) {
+        //检验是否有表单数据
+        const todo = await FormTodo.findOne({
+            where: {
+                formId: formId
+            }
+        })
+        if (todo) {
+            throw new BadRequestException('此表单已有数据，无法修改流程')
+        }
         return ResponseUtil.success(await this.procedureService.deleteByFormId(formId))
     }
 

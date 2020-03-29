@@ -53,10 +53,7 @@ export class FormService {
         return Form.findByPk(id);
     }
 
-    async toSubmit(id: string, nodeId?: string) {
-        const form: Form = await Form.findByPk(id)
-        if (!form)
-            throw new BadRequestException('对应表单不存在')
+    async toSubmit(form: Form, nodeId?: string) {
         if (form.type === 'flow') {
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
             if (procedure && procedure.nodes) {
@@ -71,31 +68,16 @@ export class FormService {
                 const letter = targetNode.letter
                 const visibleItem = form.items.filter((i) => {
                     const find = letter.find((s) => {
-                        return s === `${i.id}:visible` ||  s === `${i.id}:editable`
+                        return s === `${i.id}:visible` || s === `${i.id}:editable`
                     })
                     return !!find
                 }).map((item) => {
                     item.visible = true
-                    item.enable = !!letter.find(s=>{
-                        return  s === `${item.id}:editable`
+                    item.enable = !!letter.find(s => {
+                        return s === `${item.id}:editable`
                     })
                     return item
                 })
-                // const visibleItem = targetNode.letter.filter((s) => {
-                //     return s.includes(':visible')
-                // }).map((s) => {
-                //     const item = form.items.find((item) => {
-                //         return item.id === s.replace(':visible', '')
-                //     })
-                //     item.visible = true
-                //     //editAble =>
-                //     const findEditable = targetNode.letter.find((s) => {
-                //         return s === item.id + ':editable'
-                //     })
-                //     item.enable = !!findEditable
-                //     return item
-                // })
-
                 const briefItems = targetNode.letter.filter((s) => {
                     return s.includes(':brief')
                 }).map((s) => {
@@ -103,7 +85,7 @@ export class FormService {
                         return i.id === s.replace(':brief', '')
                     })
                 })
-                return {form, items: visibleItem, briefItems, suggest: targetNode.suggest}
+                return {form, items: visibleItem, briefItems, node: targetNode}
             } else {
                 throw new BadRequestException('找不到流程节点，请完善流程')
             }

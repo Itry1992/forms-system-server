@@ -8,7 +8,7 @@ import {ApiHideProperty} from "@nestjs/swagger";
 interface i {
     id: string,
     visible: boolean
-    edit:boolean
+    edit: boolean
 }
 
 @Table({
@@ -22,7 +22,6 @@ export default class ProcedureNode extends Model {
     })
     id: string
 
-
     @Column
     name: string
     @Column
@@ -35,7 +34,7 @@ export default class ProcedureNode extends Model {
     @Column
     label: string;//text;
     @Column
-    clazz: 'start'|'end'|'userTask'|'receiveTask'
+    clazz: 'start' | 'end' | 'userTask' | 'receiveTask'
 
     @Column
     dueDate: string
@@ -67,7 +66,7 @@ export default class ProcedureNode extends Model {
     suggest?: boolean;//文本意见;
     @Column
     handWritten?: boolean;//手写签名；
-    @Column
+    @Column({defaultValue: true})
     submit?: boolean;//提交;
     @Column
     submitWithPrint?: boolean;//提交并打印

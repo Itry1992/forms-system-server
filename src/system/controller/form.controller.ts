@@ -1,4 +1,4 @@
-import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
+import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
@@ -11,12 +11,18 @@ import {ResponseUtil} from "../../common/response.util";
 import Form from "../../entity/form.entity";
 import {FormCreateDto} from "../dto/form.create.dto";
 import {domainToUnicode} from "url";
+import {FormExportDto} from "../dto/form.export.dto";
+import FormData from "../../entity/form.data.entity";
+import {Response} from 'express';
+import * as fs from "fs";
+import {XlsxService} from "../service/xlsx.service";
 
 @Controller('/form')
 @ApiTags('form')
 export class FormController {
     constructor(private readonly deptService: DeptService,
-                private readonly formService: FormService) {
+                private readonly formService: FormService,
+                private readonly xlsxService: XlsxService) {
     }
 
     @Get('/list')
@@ -78,6 +84,9 @@ export class FormController {
     @Post('/update/:formId')
     // @ApiBearerAuth
     async update(@Body()form: Form, @Param('formId')formId: string) {
+        if (!form.items || form.items.length === 0) {
+            throw new BadRequestException('items.length = 0')
+        }
         if (form.items) {
             form.items.forEach((item) => {
                 if (!item.id)
@@ -89,12 +98,15 @@ export class FormController {
     }
 
     @Get('/toSubmit/:id')
-    @ApiOperation({description:'初次提交获取itmes'})
+    @ApiOperation({description: '初次提交获取itmes'})
     async toSubmit(@Param('id') id: string) {
-        const  res = await  this.formService.toSubmit(id)
-        const  form = res.form
+        //formId
+        const form: Form = await Form.findByPk(id)
+        if (!form)
+            throw new BadRequestException('对应表单不存在')
+        const res = await this.formService.toSubmit(form)
         form.items = res.items
-        return  ResponseUtil.success(form)
+        return ResponseUtil.success(form)
     }
 
 
@@ -111,6 +123,34 @@ export class FormController {
                 this.getIds(d, ids)
             })
         }
+    }
+
+    @Post('/excelExport/:formId')
+    async export(@Param('formId') formId: string, @Body() formExportDto: FormExportDto, @Res() res: Response) {
+        const form: Form = await Form.findByPk(formId)
+        if (!form)
+            throw new BadRequestException('no entity form whit  this id ')
+        const data: FormData[] = await FormData.findAll({
+            where: {
+                formId,
+                endData: 'end'
+            }
+        })
+
+        const path =  await this.xlsxService.export(data,form,formExportDto)
+        const rs = fs.createReadStream(path)
+        rs.on('data', chunk => {
+            res.write(chunk, 'binary')
+        })
+        rs.on('end', () => {
+            // fs.unlinkSync(path)
+            res.end()
+        })
+
+
+        // if (formExportDto.createUser)
+
+        // data.forEach()
     }
 
 }

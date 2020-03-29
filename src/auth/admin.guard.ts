@@ -16,14 +16,7 @@ import { ExecutionContext, Injectable } from '@nestjs/common';
 @Injectable()
 export class AdminGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {
-    // console.log('=================================context')
-    // console.log(context)
-    // console.log(context.switchToHttp().getRequest())
-    // // console.log(context.switchToHttp().)
-    // console.log('====================end')
-    // return super.canActivate(context);
     const request =  context.switchToHttp().getRequest()
-    console.log('user',request.user.id)
     if (request.user.sysRole && request.user.sysRole.name ==='systemAdmin')
       return  true
     return false

@@ -121,4 +121,14 @@ export class DeptService {
             }]
         })
     }
+
+    async findRoot(dept: Dept) {
+        if (dept.parentId && dept.parentId !== '0') {
+            const parent = await Dept.findByPk(dept.parentId)
+            if (parent)
+                await this.findRoot(parent)
+            return dept
+        }
+        return  dept
+    }
 }

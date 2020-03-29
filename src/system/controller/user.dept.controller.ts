@@ -1,7 +1,6 @@
 import {Body, Controller, Get, Param, Post, Query, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {UserService} from "../service/user.service";
-import {TestGuard} from "../../auth/test.guard";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import {DeptService} from "../service/dept.service";
@@ -16,8 +15,6 @@ export class UserDeptController {
     }
 
     @Get('/list')
-    // @UseGuards(TestGuard)
-    // @ApiBearerAuth()
     async list(@Query(PageVoPipe) pageVo: PageQueryVo, @Query('name') name?: string,
                @Query('deptId')deptId?: string) {
         return this.userService.list(pageVo, name, deptId)

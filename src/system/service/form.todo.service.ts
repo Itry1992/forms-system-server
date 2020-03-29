@@ -21,7 +21,7 @@ export class FormTodoService {
             where: {
                 formId,
                 formDataGroup: dataGroup,
-                status:'1',
+                status: '1',
                 ...userOpt
             },
             include: [{
@@ -30,7 +30,7 @@ export class FormTodoService {
         })
     }
 
-    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string , type: string, currentUserDeal?: boolean) {
+    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string, type: string, currentUserDeal?: boolean) {
         const userOpt = this.getUserOpt(user)
         const statusOpt: any = {}
         if (status === '1')
@@ -38,19 +38,19 @@ export class FormTodoService {
         if (status === '2') {
             statusOpt.status = '2'
         }
-        if (currentUserDeal===true && user) {
+        if (currentUserDeal === true ) {
             statusOpt.status = '2'
             statusOpt.dealUserId = user.id
         }
         return FormTodo.findAndCountAll({
             where: {
-                type:type,
+                type: type,
                 ...userOpt,
                 ...statusOpt
             },
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset(),
-            order:[['createdAt','DESC']]
+            order: [['createdAt', 'DESC']]
         })
     }
 
@@ -92,6 +92,17 @@ export class FormTodoService {
             where: whereOpt,
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset()
+        });
+    }
+
+    async createByUser(user: User, pageQueryVo: PageQueryVo) {
+        return FormTodo.findAndCountAll({
+            where: {
+                createUser: user.id
+            },
+            limit: pageQueryVo.getSize(),
+            offset: pageQueryVo.offset(),
+            order: [['createdAt', 'DESC']]
         });
     }
 }

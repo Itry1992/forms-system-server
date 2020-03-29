@@ -9,13 +9,16 @@ export class AnyExceptionFilter implements ExceptionFilter {
 
         if (exception)
             console.log(exception)
-        response
-            .status('200')
-            .json({
-                success: false,
-                timestamp: new Date().toISOString(),
-                path: request.url,
-                message: JSON.stringify(exception.message.message || exception.message || exception.error || exception)
-            });
+        if (exception.message && exception.message.message && exception.message.message === 'jwt expired') {
+            response.status('402').json({success: false})
+        } else
+            response
+                .status('200')
+                .json({
+                    success: false,
+                    timestamp: new Date().toISOString(),
+                    path: request.url,
+                    message: JSON.stringify(exception.message.message || exception.message || exception.error || exception)
+                });
     }
 }

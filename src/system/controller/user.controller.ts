@@ -5,7 +5,6 @@ import {PageQueryVo} from "../../common/pageQuery.vo";
 import {UserService} from "../service/user.service";
 import User from "../../entity/User.entity";
 import {ResponseUtil} from "../../common/response.util";
-import {TestGuard} from "../../auth/test.guard";
 import {DeptTreeDto} from "../dto/dept.tree.dto";
 import Dept from "../../entity/Dept.entity";
 
@@ -16,8 +15,6 @@ export class UserController {
     }
 
     @Get('/list')
-    // @UseGuards(TestGuard)
-    // @ApiBearerAuth()
     async list(@Query(PageVoPipe) pageVo: PageQueryVo, @Query('name') name?: string) {
         return this.userService.list(pageVo, name)
     }
