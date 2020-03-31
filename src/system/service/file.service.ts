@@ -1,6 +1,6 @@
 import {Injectable} from "@nestjs/common";
 import * as Fs from "fs";
-import {FileUpLoadUrl} from "../../common/file.upload.url";
+import {FileUploadConfig} from "../../common/file.upload.config";
 import moment from "moment";
 import * as uuid from 'node-uuid';
 import {ResponseUtil} from "../../common/response.util";
@@ -10,7 +10,7 @@ import Attachment from "../../entity/attachment.entity";
 export class FileService {
 
     async addFile(file: any) {
-        const uploadFile: string = FileUpLoadUrl.url
+        const uploadFile: string = FileUploadConfig.getUrl()
         const parentFile = `${uploadFile}/${moment().format('YYMMDD')}`;
         // Fs.
         if (!Fs.existsSync(parentFile)) {

@@ -45,7 +45,7 @@ export class FormDataService {
 
     // async find
 
-    async submit(dataDto: FormDataSubmitDto, form :Form, ip?: string, user?: User) {
+    async submit(dataDto: FormDataSubmitDto, form: Form, ip?: string, user?: User) {
         //第一次提交时候 自动赋予start
         //获取表单
 
@@ -71,7 +71,7 @@ export class FormDataService {
                 }
                 //======填装初始数据====
                 formData.crateIp = ip
-                if (user){
+                if (user) {
                     formData.createUserId = user.id
                     formData.createUserName = user.name
                 }
@@ -172,7 +172,7 @@ export class FormDataService {
                 FormData.update({dataGroupStatus: '2'}, {
                     where: {
                         formId: formId,
-                        formDataGroup: data.dataGroup
+                        dataGroup: data.dataGroup
                     }
                 })
                 return res
@@ -246,25 +246,25 @@ export class FormDataService {
                         switch (condition.conditionsRule) {
                             case 'equal':
                                 let res = false
-                                let value
-                                if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
-                                    value = JSON.parse(condition.conditionsValue)['value']
-                                    res = dataDto.data[condition.itemId] !== value
-                                } else
-                                    res = dataDto.data[condition.itemId] !== condition.conditionsValue
+                                // let value
+                                // if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
+                                //     // value = JSON.parse(condition.conditionsValue)['value']
+                                //     res = dataDto.data[condition.itemId] !== value
+                                // } else
+                                res = dataDto.data[condition.itemId] !== condition.conditionsValue
                                 if (res)
-                                    rReason.push(item.title + ' 需要等于 ' + value || condition.conditionsValue)
+                                    rReason.push(item.title + ' 需要等于 ' +  condition.conditionsValue)
                                 return res
                             case 'notEqual':
                                 let res2 = false
-                                let value2
-                                if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
-                                    value2 = JSON.parse(condition.conditionsValue)['value']
-                                    res2 = dataDto.data[condition.itemId] === value2
-                                } else
+                                // let value2
+                                // if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
+                                //     value2 = JSON.parse(condition.conditionsValue)['value']
+                                //     res2 = dataDto.data[condition.itemId] === value2
+                                // } else
                                     res2 = dataDto.data[condition.itemId] === condition.conditionsValue
                                 if (res2)
-                                    rReason.push(item.title + ' 需要不等于 ' + value2 || condition.conditionsValue)
+                                    rReason.push(item.title + ' 需要不等于 ' + condition.conditionsValue)
                                 return res2
                             case 'null':
                                 const res3 = !!dataDto.data[condition.itemId]
@@ -312,7 +312,6 @@ export class FormDataService {
                                     throw new BadRequestException('error type of' + item.title, 'new array of string')
                                 }
                                 return res6
-                                break
                             default:
                                 throw new BadRequestException('未定义的提交校验条件')
                         }
@@ -385,6 +384,7 @@ export class FormDataService {
                     formTitle: form.name,
                     formDataGroup: formData.dataGroup,
                     createUser: user && user.name || '',
+                    createUserId: user && user.id || '',
                     briefData,
                     nodeName: targetNode.label,
                     type: targetNode.clazz,

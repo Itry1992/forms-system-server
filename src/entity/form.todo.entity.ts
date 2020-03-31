@@ -62,6 +62,10 @@ export default class FormTodo extends Model {
 
     @Column
     createUser: string
+
+    @Column
+    createUserId: string
+
     @Column
     status: '1' | '2'
 

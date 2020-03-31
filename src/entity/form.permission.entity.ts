@@ -1,5 +1,5 @@
-import {Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
-import {UUIDV4} from "sequelize";
+import {BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
+import  {UUIDV4} from "sequelize";
 import {FiledPermissionInterface} from "./JSONDataInterface/filedPermission.interface";
 import Form from "./form.entity";
 

@@ -40,6 +40,9 @@ export default class Dept extends Model {
     parentId: string
 
     @Column
+    rootId: string
+
+    @Column
     hasChildren: boolean
 
     @ApiHideProperty()

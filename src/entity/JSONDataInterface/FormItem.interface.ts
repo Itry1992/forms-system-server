@@ -12,7 +12,7 @@ export class FormItemInterface {
     /**可见 */
     visible?: boolean;
     allowBlank?: boolean;
-    rely?: null;
+    // rely?: null;
     /**默认值 */
     value?: string;
     /**格式 校验 */
@@ -23,7 +23,7 @@ export class FormItemInterface {
     required?: boolean;
     /**扫码输入 */
     scan?: ScanInterface;
-    ank?: false;
+    ank?: boolean;
     allowDecimals?: boolean;
     maxNumber?: number;
     minNumber?: number;

@@ -5,6 +5,9 @@ import {ResponseUtil} from "../../common/response.util";
 import Dept from "../../entity/Dept.entity";
 import {DeptTreeDto} from "../dto/dept.tree.dto";
 import User from "../../entity/User.entity";
+import {UserCreateDto} from "../dto/user.create.dto";
+import DeptUsersEntity from "../../entity/dept.users.entity";
+import {deprecate} from "util";
 
 @Injectable()
 export class DeptService {
@@ -34,17 +37,30 @@ export class DeptService {
 
 
     async create(data: Dept) {
-        if (!data.parentId || data.parentId !== '0') {
+        if (data.parentId && data.parentId !== '0') {
+            //父节点 hasChildren 维护
+            const dept = await Dept.findByPk(data.parentId)
+            if (dept)
+                if (dept.rootId && dept.rootId !== '0')
+                    data.rootId = dept.rootId
+                else
+                    data.rootId = data.parentId
+            else
+                data.rootId = '0'
             Dept.update({hasChildren: true}, {
                 where: {
                     id: data.parentId
                 }
             })
-        }
+        } else
+            data.rootId = '0'
+        // rootid 维护
+
         return Dept.create(data);
     }
 
     async update(data: Dept) {
+        delete data.parentId
         return Dept.update(data, {
             where: {id: data.id}
         })
@@ -52,7 +68,7 @@ export class DeptService {
 
     async delete(id: string, req?) {
         const dept = await Dept.findByPk(id)
-        if (req.user.sysRoleId === '1' && dept.parentId === '0') {
+        if (req.user.sysRoleId !== '1' && dept.parentId === '0') {
             throw  new BadRequestException('only systemAdmin can delete this dept node')
         }
         if (dept)
@@ -123,12 +139,38 @@ export class DeptService {
     }
 
     async findRoot(dept: Dept) {
-        if (dept.parentId && dept.parentId !== '0') {
-            const parent = await Dept.findByPk(dept.parentId)
-            if (parent)
-                await this.findRoot(parent)
+        //
+        // if (dept.parentId && dept.parentId !== '0') {
+        //     const parent = await Dept.findByPk(dept.parentId)
+        //     if (parent)
+        //         await this.findRoot(parent)
+        //     return dept
+        // }
+        // return dept
+        if (!dept.rootId || dept.rootId === '0') {
             return dept
-        }
-        return  dept
+        } else
+            return Dept.findByPk(dept.rootId)
+    }
+
+    createWithDept(userCreateDto: UserCreateDto, rootDept: Dept) {
+        const deptId = userCreateDto.deptId
+        let user: any = {}
+        if (userCreateDto.isDeptAdmin)
+            user.sysRoleId = '2'
+        delete userCreateDto.isDeptAdmin
+        delete userCreateDto.deptId
+        user = {...user, ...userCreateDto}
+        user.rootDeptId = rootDept.id
+        return User.sequelize.transaction(t => {
+            return User.create(user).then(res => {
+                return DeptUsersEntity.create({
+                    userId: res.id,
+                    deptId
+                }).then(() => {
+                    return res
+                })
+            })
+        })
     }
 }

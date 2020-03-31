@@ -38,7 +38,7 @@ export class FormTodoService {
         if (status === '2') {
             statusOpt.status = '2'
         }
-        if (currentUserDeal === true ) {
+        if (currentUserDeal === true) {
             statusOpt.status = '2'
             statusOpt.dealUserId = user.id
         }
@@ -98,7 +98,7 @@ export class FormTodoService {
     async createByUser(user: User, pageQueryVo: PageQueryVo) {
         return FormTodo.findAndCountAll({
             where: {
-                createUser: user.id
+                createUserId: user.id
             },
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset(),

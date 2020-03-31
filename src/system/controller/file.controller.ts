@@ -7,7 +7,8 @@ import {FileInterceptor} from "@nestjs/platform-express";
 import Attachment from "../../entity/attachment.entity";
 import {ResponseUtil} from "../../common/response.util";
 import {Op} from "sequelize";
-import {FileUpLoadUrl} from "../../common/file.upload.url";
+import {FileUploadConfig} from "../../common/file.upload.config";
+
 
 @Controller('/file')
 @ApiTags('file')
@@ -32,8 +33,8 @@ export class FileController {
         res.set('Content-Length', `${entity.size}`)
 
         let path = entity.localPath
-        if (!path.startsWith(FileUpLoadUrl.url)) {
-            path = FileUpLoadUrl.url + '/' + entity.localPath
+        if (!path.startsWith(FileUploadConfig.getUrl())) {
+            path = FileUploadConfig.getUrl() + '/' + entity.localPath
         }
         const rs = Fs.createReadStream(path)
         rs.on('data', chunk => {

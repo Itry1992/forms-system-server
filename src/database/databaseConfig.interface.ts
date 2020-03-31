@@ -13,6 +13,7 @@ export const databaseConfig: IDatabaseOptions = {
         database: 'huzhan',
         timezone: '+08:00',
         dialectOptions: {
+            useUTC:false,
             dateStrings: true,
             typeCast:  (field: any, next: any) => { // for reading from database
                 if (field.type === 'DATETIME') {
@@ -30,14 +31,19 @@ export const databaseConfig: IDatabaseOptions = {
         password: 'admin',
         database: 'huzhan',
         timezone: '+08:00',
-        dialectOptions: {
-            dateStrings: true,
-            typeCast:  (field: any, next: any) => { // for reading from database
-                if (field.type === 'DATETIME') {
-                    return field.string()
-                }
-                return next()
-            },
+        pool:{
+            max:100,
+            min:1
         },
+        // dialectOptions: {
+        //     useUTC:false,
+        //     // dateStrings: true,
+        //     // typeCast:  (field: any, next: any) => { // for reading from database
+        //     //     if (field.type === 'DATETIME') {
+        //     //         return field.toLocaleString
+        //     //     }
+        //     //     return next()
+        //     // },
+        // },
     },
 }

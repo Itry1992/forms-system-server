@@ -1,5 +1,5 @@
-import {Body, Controller, Delete, Get, Param, Post, Query, UseGuards} from "@nestjs/common";
-import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
+import {BadRequestException, Body, Controller, Delete, Get, Param, Post, Query, UseGuards} from "@nestjs/common";
+import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import {UserService} from "../service/user.service";
@@ -26,8 +26,10 @@ export class UserController {
     }
 
     @Post('/add')
+    @ApiOperation({description:'废弃接口'})
     async add(@Body()user: User) {
-        return this.userService.create(user)
+        throw new BadRequestException('该接口已经废弃')
+        // return this.userService.create(user)
     }
 
     @Post('/update')

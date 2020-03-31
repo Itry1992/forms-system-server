@@ -1,4 +1,4 @@
-import {ApiOperation, ApiProperty} from "@nestjs/swagger";
+import {ApiProperty} from "@nestjs/swagger";
 
 export class PageQueryVo {
     @ApiProperty({required:false})
@@ -16,6 +16,10 @@ export class PageQueryVo {
             return 10;
         }
         return this.size;
+    }
+
+    limit() : number {
+        return this.getSize()
     }
 
     public offset(): number {

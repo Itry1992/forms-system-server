@@ -48,7 +48,9 @@ export default class User extends Model {
 
     weChartId: string
 
-    @Column
+    @Column({
+        defaultValue:'0'
+    })
     status: string
 
     @ApiHideProperty()
@@ -62,7 +64,10 @@ export default class User extends Model {
     @ForeignKey(() => SysRole)
     sysRoleId: string
     @ApiHideProperty()
-    @BelongsTo(()=>SysRole)
-    sysRole:SysRole
+    @BelongsTo(() => SysRole)
+    sysRole: SysRole
+
+    @Column
+    rootDeptId: string
 
 }

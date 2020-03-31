@@ -16,6 +16,10 @@ import {LabelInterface} from "./JSONDataInterface/label.interface";
 import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
 import Dept from "./Dept.entity";
 
+interface MemberInterface {
+    id: string,
+    name: string
+}
 
 @Table({
 
@@ -85,15 +89,21 @@ export default class Form extends Model {
 
     //发布可用人员
     @Column({
-        type:DataType.ARRAY(DataType.STRING)
+        type: DataType.ARRAY(DataType.STRING)
     })
-    writeAbleUserId:string[]
+    writeAbleUserId: string[]
 
-    //
+
     @Column({
-        type:DataType.ARRAY(DataType.STRING)
+        type: DataType.ARRAY(DataType.STRING)
     })
-    writeAbleDeptId : string[]
+    writeAbleDeptId: string[]
+
+    @Column({
+        defaultValue: '0',
+        type: DataType.STRING(1000)
+    })
+    publicUrl: string
 
     @Column
     password: string

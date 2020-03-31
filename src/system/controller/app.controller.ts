@@ -6,10 +6,10 @@ import {SysAppService} from "../service/sysApp.service";
 import {AuthGuard} from "@nestjs/passport";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import App from "../../entity/App.entity";
-import {userInfo} from "os";
 import {ResponseUtil} from "../../common/response.util";
 import {AppUpdateDto} from "../dto/app.update.dto";
 import {TeamService} from "../service/team.service";
+
 
 @ApiTags('应用')
 @Controller('/app')
@@ -82,5 +82,8 @@ export class AppController {
     async copy() {
         return {success: true}
     }
+
+
+
 
 }

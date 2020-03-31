@@ -8,6 +8,8 @@ import {PageQueryVo} from "../../common/pageQuery.vo";
 import {FormCreateDto} from "../dto/form.create.dto";
 import Procedure from "../../entity/procedure.entity";
 import {ProcedureService} from "./procedure.service";
+import {FormWriteableDto} from "../dto/form.writeable.dto";
+import User from "../../entity/User.entity";
 
 @Injectable()
 export class FormService {
@@ -97,5 +99,47 @@ export class FormService {
             return {form, items}
         }
 
+    }
+
+    async updateWriteAble(formWriteableDto: FormWriteableDto, id: string) {
+        const updateData: any = {}
+        if (formWriteableDto.users)
+            updateData.writeAbleUserId = formWriteableDto.users.map((u) => {
+                return u.id
+            })
+        if (formWriteableDto.depts)
+            updateData.writeAbleDeptId = formWriteableDto.depts.map((d) => {
+                return d.id
+            })
+        if (formWriteableDto.publicUrl)
+            updateData.publicUrl = formWriteableDto.publicUrl
+        return Form.update(updateData, {
+            where: {id}
+        })
+    }
+
+    async writeAbleList(user: User, name: string, pageQueryVo: PageQueryVo) {
+        const whereOpt: any = {}
+        if (name)
+            whereOpt.name = {[Op.like]: `%${name}%`}
+        if (user.depts && user.depts.length !== 0) {
+            whereOpt[Op.or] = {
+                writeAbleUserId: {[Op.contains]: [user.id]},
+                writeAbleDeptId: {[Op.contains]: [user.depts[0].id]},
+            }
+        } else {
+            whereOpt.writeAbleUserId = {[Op.contains]: [user.id]}
+        }
+
+        return Form.findAndCountAll({
+            where: whereOpt,
+            limit: pageQueryVo.getSize(),
+            offset: pageQueryVo.offset(),
+            attributes:['id','name','createdAt'],
+            include:[{
+                model:Dept,
+                attributes:['id','name']
+            }]
+        })
     }
 }

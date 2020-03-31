@@ -73,13 +73,16 @@ export class UserService {
         })
     }
 
-    async updateAssociation(userId: string, newDeptId: string) {
+    async updateAssociation(userId: string, newDeptId: string, rootDeptId: string) {
         return DeptUsersEntity.sequelize.transaction(t => {
             return DeptUsersEntity.destroy({
                     where: {userId}
                 }
             ).then(() => {
-                return DeptUsersEntity.create({userId, deptId: newDeptId})
+                return Promise.all([
+                    DeptUsersEntity.create({userId, deptId: newDeptId}),
+                    User.update({rootDeptId}, {where: {id: userId}})
+                ])
             })
         })
     }

@@ -16,6 +16,10 @@ import FormData from "../../entity/form.data.entity";
 import {Response} from 'express';
 import * as fs from "fs";
 import {XlsxService} from "../service/xlsx.service";
+import {FormWriteableDto} from "../dto/form.writeable.dto";
+import User from "../../entity/User.entity";
+import {Op} from "sequelize";
+import {ArrayUtil} from "../../common/util/array.util";
 
 @Controller('/form')
 @ApiTags('form')
@@ -84,7 +88,7 @@ export class FormController {
     @Post('/update/:formId')
     // @ApiBearerAuth
     async update(@Body()form: Form, @Param('formId')formId: string) {
-        if (!form.items || form.items.length === 0) {
+        if (ArrayUtil.isNull(form.items)) {
             throw new BadRequestException('items.length = 0')
         }
         if (form.items) {
@@ -137,7 +141,7 @@ export class FormController {
             }
         })
 
-        const path =  await this.xlsxService.export(data,form,formExportDto)
+        const path = await this.xlsxService.export(data, form, formExportDto)
         const rs = fs.createReadStream(path)
         rs.on('data', chunk => {
             res.write(chunk, 'binary')
@@ -146,11 +150,60 @@ export class FormController {
             // fs.unlinkSync(path)
             res.end()
         })
-
-
-        // if (formExportDto.createUser)
-
-        // data.forEach()
     }
+
+    @Post('/updateWriteAble/:formId')
+    @ApiOperation({description: '维护 可以填写改表单的用户'})
+    async updateUseAbleUser(@Body() formWriteableDto: FormWriteableDto, @Param('formId') formId: string) {
+        const res = await this.formService.updateWriteAble(formWriteableDto, formId)
+        return ResponseUtil.success(res)
+    }
+
+
+    @Get('/getWriteAble/:formId')
+    async getWriteAble(@Param('formId') formId: string) {
+        const writeableData: Form = await Form.findByPk(formId, {attributes: ['writeAbleUserId', 'writeAbleDeptId', 'publicUrl']})
+        if (!writeableData)
+            throw new BadRequestException('no form with id ' + formId)
+        const writeableDto: any = {}
+        writeableDto.publicUrl = writeableData.publicUrl
+        const ps = []
+        if (writeableData.writeAbleUserId && writeableData.writeAbleUserId.length !== 0) {
+            ps.push(User.findAll({
+                    where: {
+                        id: {[Op.in]: writeableData.writeAbleUserId}
+                    }
+                }).then(res => {
+                    writeableDto.users = res.map((u) => {
+                        return {id: u.id, name: u.name}
+                    })
+                })
+            )
+        }
+        if (writeableData.writeAbleDeptId && writeableData.writeAbleDeptId.length !== 0) {
+            ps.push(Dept.findAll({
+                    where: {
+                        id: {[Op.in]: writeableData.writeAbleDeptId}
+                    }
+                }).then(res => {
+                    writeableDto.depts = res.map((u) => {
+                        return {id: u.id, name: u.name}
+                    })
+                })
+            )
+        }
+        await Promise.all(ps)
+        return ResponseUtil.success(writeableDto)
+    }
+
+    @Get('/writeAbleList')
+    @ApiOperation({description: '当前用户可以填写的表单列表'})
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    async writeAbleList(@Req() req, @Query('name') name: string, @Query(PageVoPipe) pageQueryVo: PageQueryVo) {
+        const data = await this.formService.writeAbleList(req.user, name, pageQueryVo)
+        return ResponseUtil.page(data)
+    }
+
 
 }
