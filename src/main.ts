@@ -1,7 +1,7 @@
 import {NestFactory} from '@nestjs/core';
 import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
 import {AppModule} from './app.module';
-
+import * as express from "express";
 import {logger} from "./common/logger";
 import {AnyExceptionFilter} from "./common/AnyExceptionFilter";
 
@@ -13,6 +13,8 @@ async function bootstrap() {
     app.use(logger)
     app.useGlobalFilters(new AnyExceptionFilter())
 
+
+    app.use(express.json({limit: '50mb'}));
     const options = new DocumentBuilder()
         .addBearerAuth()
         .setTitle(' API')

@@ -18,14 +18,6 @@ export class ProcedureController {
     @ApiOperation({description: '支持 node and edge 同时传递'})
     async update(@Body() procedure: Procedure, @Param('formId') formId: string) {
         //检验是否有表单数据
-        const todo = await FormTodo.findOne({
-            where: {
-                formId: formId
-            }
-        })
-        if (todo) {
-            throw new BadRequestException('此表单已有数据，无法修改流程')
-        }
 
 
         procedure.formId = formId
@@ -52,6 +44,16 @@ export class ProcedureController {
                 }
             })
         }
+
+        const todo = await FormTodo.findOne({
+            where: {
+                formId: formId
+            }
+        })
+        if (todo) {
+            throw new BadRequestException('此表单已有数据，无法修改流程')
+        }
+
         return ResponseUtil.success(await this.procedureService.upsert(procedure, formId))
         // return ResponseUtil.create()
     }

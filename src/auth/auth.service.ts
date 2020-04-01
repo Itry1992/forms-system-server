@@ -18,7 +18,8 @@ export class AuthService {
                 account, pwd
             },
             include:[{
-                model:Dept
+                model:Dept,
+                attributes:['id','name']
             }]
         });
         if (user) {

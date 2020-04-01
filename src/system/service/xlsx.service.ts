@@ -13,6 +13,7 @@ import Attachment from "../../entity/attachment.entity";
 import {Op} from "sequelize";
 import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
 import ownKeys = Reflect.ownKeys;
+import {ifError} from "assert";
 
 @Injectable()
 export class XlsxService {
@@ -87,61 +88,72 @@ export class XlsxService {
                     cellData = datas[rowIndex].updatedAt.toLocaleString()
                 const item = effectItems[colIndex]
 
-                if (item && item.type === 'image') {
-                    //本地图片处理
-                    const attachments: { uid: string }[] = cellData
-                    if (attachments) {
-                        const res = Attachment.findAll({
-                            where: {
-                                id: {
-                                    [Op.in]: attachments.map((s) => {
-                                        return s.uid
+                if (item && (item.type === 'image' || item.type === 'signName')) {
+                    //本地图片处理if
+                    if (typeof cellData === 'string' && cellData.startsWith('data:image/png')) {
+                        const image = workbook.addImage({
+                            base64: cellData,
+                            extension: 'png',
+                        });
+                        worksheet.addImage(image, {
+                            tl: {col: colIndex, row: rowIndex},
+                            ext: {width: 60, height: 40}
+                        });
+                    } else {
+                        const attachments: { uid: string }[] = cellData
+                        if (attachments && Array.isArray(attachments)) {
+                            const res = Attachment.findAll({
+                                where: {
+                                    id: {
+                                        [Op.in]: attachments.map((s) => {
+                                            return s.uid
+                                        })
+                                    }
+                                }
+                            }).then(res => {
+                                if (res && res.length !== 0) {
+                                    res.map(async (a, index) => {
+                                        const type = a.localPath.split('\.')[1]
+                                        let extension: 'jpeg' | 'png' | 'gif' = 'jpeg'
+                                        switch (type) {
+                                            case 'jpg' || 'JPG':
+
+                                                break;
+                                            case 'gif' || 'GIF':
+                                                extension = 'gif'
+                                                break
+                                            case 'jpeg' || 'JPEG':
+                                                extension = 'jpeg'
+                                                break
+                                            case 'png' || 'PNG':
+                                                extension = 'png'
+                                                break
+                                        }
+                                        const image = workbook.addImage({
+                                            filename: FileUploadConfig.getUrl() + '/' + a.localPath,
+                                            extension,
+                                        });
+                                        if (res.length === 1) {
+                                            worksheet.addImage(image, {
+                                                tl: {col: colIndex, row: rowIndex},
+                                                ext: {width: 120, height: 120}
+                                            });
+                                        }
+                                        if (res.length > 1) {
+                                            const step = 1 / (res.length + 1)
+                                            worksheet.addImage(image, {
+                                                tl: {col: colIndex + index * 1.05 * step, row: rowIndex + 1},
+                                                br: {col: colIndex + (index + 1) * step, row: rowIndex + 2},
+                                                ext: {width: 120, height: 120}
+                                            });
+                                        }
+
                                     })
                                 }
-                            }
-                        }).then(res => {
-                            if (res && res.length !== 0) {
-                                res.map(async (a, index) => {
-                                    const type = a.localPath.split('\.')[1]
-                                    let extension: 'jpeg' | 'png' | 'gif' = 'jpeg'
-                                    switch (type) {
-                                        case 'jpg' || 'JPG':
+                            })
 
-                                            break;
-                                        case 'gif' || 'GIF':
-                                            extension = 'gif'
-                                            break
-                                        case 'jpeg' || 'JPEG':
-                                            extension = 'jpeg'
-                                            break
-                                        case 'png' || 'PNG':
-                                            extension = 'png'
-                                            break
-                                    }
-                                    const image = workbook.addImage({
-                                        filename: FileUploadConfig.getUrl() + '/' + a.localPath,
-                                        extension,
-                                    });
-                                    if (res.length === 1) {
-                                        worksheet.addImage(image, {
-                                            tl: {col: colIndex, row: rowIndex},
-                                            ext: {width: 120, height: 120}
-                                        });
-                                    }
-                                    if (res.length > 1) {
-                                        const step = 1 / (res.length + 1)
-                                        worksheet.addImage(image, {
-                                            tl: {col: colIndex + index * 1.05 * step, row: rowIndex + 1},
-                                            // br: {col: colIndex + (index + 1) * step, row: rowIndex + 2},
-                                            ext: {width: 120, height: 120}
-                                        });
-                                    }
-
-                                })
-                            }
-                        })
-
-                        promiseD.push(res)
+                            promiseD.push(res)
+                        }
                     }
 
                 } else if (typeof cellData === 'string') {

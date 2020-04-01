@@ -1,4 +1,4 @@
-import {Controller, Get, Param, Post, Query, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
+import {Body, Controller, Get, Param, Post, Query, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
 import * as Fs from "fs";
 import {Response} from 'express';
 import {FileService} from "../service/file.service";
@@ -8,6 +8,9 @@ import Attachment from "../../entity/attachment.entity";
 import {ResponseUtil} from "../../common/response.util";
 import {Op} from "sequelize";
 import {FileUploadConfig} from "../../common/file.upload.config";
+import * as fs from "fs";
+import * as uuid from 'node-uuid';
+import {Base64UploadDto} from "../dto/base64.upload.dto";
 
 
 @Controller('/file')
@@ -25,12 +28,39 @@ export class FileController {
         else return ResponseUtil.error('no file')
     }
 
+    @Post('/addBase64Url')
+    async addBase64Url(@Body() d: Base64UploadDto ) {
+        const basePath = FileUploadConfig.getUrl()
+        if (!Fs.existsSync(basePath + '/handSign')) {
+            Fs.mkdirSync(basePath + '/handSign');
+        }
+        const filePath = basePath + '/handSign/' + uuid.v1() + '.jpg'
+
+        const b = d.value
+        if (!b||!b.startsWith('data:image/png;base64,'))
+            return ResponseUtil.error('string not start data:image/png;base64,')
+        const b2 =b.replace(/^data:image\/\w+;base64,/, "")
+
+
+        const buffer = Buffer.from(b2,'base64')
+        fs.writeFileSync(filePath, buffer)
+        return await Attachment.create({
+            localPath: filePath,
+            // size: '',
+            fileType: 'image/jpeg',
+            // originalName: file.originalname,
+        }).then(res => {
+            res.localPath = ''
+            return ResponseUtil.success(res)
+        });
+    }
+
     @Get('get/:id')
     async getFile(@Param('id')id: string, @Res() res: Response) {
         const entity = await Attachment.findByPk(id)
         // const  file = Fs.readFileSync(entity.localPath)
         // res.set('Content-Disposition',`attachment; filename=${entity.originalName}`)
-        res.set('Content-Length', `${entity.size}`)
+        // res.set('Content-Length', `${entity.size}`)
 
         let path = entity.localPath
         if (!path.startsWith(FileUploadConfig.getUrl())) {

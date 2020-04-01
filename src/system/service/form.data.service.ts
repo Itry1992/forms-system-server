@@ -377,7 +377,7 @@ export class FormDataService {
 
 
                 toDo.push({
-                    status: '1',
+                    status: targetNode.clazz==='receiveTask'?'2':'1',
                     targetUserId: targetNode && targetNode.assignPerson,
                     targetDeptId: targetNode && targetNode.assignDept,
                     formId: form.id,

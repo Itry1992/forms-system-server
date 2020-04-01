@@ -155,6 +155,12 @@ export class FormController {
     @Post('/updateWriteAble/:formId')
     @ApiOperation({description: '维护 可以填写改表单的用户'})
     async updateUseAbleUser(@Body() formWriteableDto: FormWriteableDto, @Param('formId') formId: string) {
+        if (!formWriteableDto.users)
+            formWriteableDto.users = []
+        if (!formWriteableDto.depts)
+            formWriteableDto.depts = []
+        if (formWriteableDto.publicUrl)
+            formWriteableDto.publicUrl = '0'
         const res = await this.formService.updateWriteAble(formWriteableDto, formId)
         return ResponseUtil.success(res)
     }
