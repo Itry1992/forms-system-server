@@ -20,6 +20,7 @@ import {FormWriteableDto} from "../dto/form.writeable.dto";
 import User from "../../entity/User.entity";
 import {Op} from "sequelize";
 import {ArrayUtil} from "../../common/util/array.util";
+import FormTodo from "../../entity/form.todo.entity";
 
 @Controller('/form')
 @ApiTags('form')
@@ -63,7 +64,13 @@ export class FormController {
 
     @Get('/detail/:id')
     async detail(@Param('id') id: string) {
-        return ResponseUtil.success(await this.formService.detail(id))
+        const todo = await FormTodo.findOne({
+            where: {
+                formId: id
+            }
+        })
+        const data = await this.formService.detail(id)
+        return {success:true,data, hasData:!!todo}
     }
 
     @Post('/add')

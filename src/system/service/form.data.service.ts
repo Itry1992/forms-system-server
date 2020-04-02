@@ -159,13 +159,17 @@ export class FormDataService {
         });
     }
 
-    async endFlow(formId: string, dataGroup: string, nodeId: string, user: User, data: FormData) {
+    async endFlow(formId: string, dataGroup: string, nodeId: string, user: User, data: FormData, receiveTaskTodo?) {
         const p = []
+
         p.push(FormTodo.update({status: '2', dealUserId: user.id}, {
             where: {
                 formId: formId || data.formId, formDataGroup: dataGroup || data.dataGroup
             }
         }))
+        if (receiveTaskTodo) {
+            p.push(this.formTodoService.bulkCreate(receiveTaskTodo))
+        }
         if (data) {
             data.endData = 'end'
             p.push(FormData.create(data).then(res => {
@@ -220,10 +224,10 @@ export class FormDataService {
         return undefined;
     }
 
-    private async flowWork(procedure, formData, dataDto, logData, form: Form, user) {
+    private async flowWork(procedure: Procedure, formData, dataDto, logData, form: Form, user) {
         //校验流转规则 确定接下来的节点 并且生成对下一个节点流转人的代办事项
         // 提交节点的对应的流转规则
-        const procedureEdges = procedure.edges.filter((edge) => {
+        const doNodeProcedure = procedure.edges.filter((edge) => {
                 return edge.source === formData.currentProcedureNodeId
             }
         )
@@ -232,120 +236,52 @@ export class FormDataService {
         })
         //规则校验
         const rReason: string[] = []
-        if (procedureEdges && procedureEdges.length !== 0) {
+        if (doNodeProcedure && doNodeProcedure.length !== 0) {
             const passEdge: ProcedureEdge[] = []
             const customPassEdge: ProcedureEdge[] = []
-            procedureEdges.forEach((edge) => {
+            //else 条件是否通过 如果有 custom 和 undefined 类型 条件通过 则为false  else 对抄送节点同样生效
+            doNodeProcedure.forEach((targetEdge) => {
                 //验证流转规则
-                if (edge.flow.conditiontype === 'custom' && edge.flow.conditions) {
+                if (targetEdge.flow.conditiontype === 'custom' && targetEdge.flow.conditions) {
                     //自定义 规则校验 对提交数据进行校验
-                    const firstUnPassCondition = edge.flow.conditions.find((condition) => {
-                        const item = form.items.find((i) => {
-                            return i.id === condition.itemId
-                        })
-                        switch (condition.conditionsRule) {
-                            case 'equal':
-                                let res = false
-                                // let value
-                                // if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
-                                //     // value = JSON.parse(condition.conditionsValue)['value']
-                                //     res = dataDto.data[condition.itemId] !== value
-                                // } else
-                                res = dataDto.data[condition.itemId] !== condition.conditionsValue
-                                if (res)
-                                    rReason.push(item.title + ' 需要等于 ' +  condition.conditionsValue)
-                                return res
-                            case 'notEqual':
-                                let res2 = false
-                                // let value2
-                                // if (item.type === 'radios' || item.type === 'checks' || item.type === 'select' || item.type === 'selectCheck') {
-                                //     value2 = JSON.parse(condition.conditionsValue)['value']
-                                //     res2 = dataDto.data[condition.itemId] === value2
-                                // } else
-                                    res2 = dataDto.data[condition.itemId] === condition.conditionsValue
-                                if (res2)
-                                    rReason.push(item.title + ' 需要不等于 ' + condition.conditionsValue)
-                                return res2
-                            case 'null':
-                                const res3 = !!dataDto.data[condition.itemId]
-                                if (res)
-                                    rReason.push(item.title + ' 需要为空 ')
-                                return res3
-                            case 'notNull':
-                                const res4 = !dataDto.data[condition.itemId]
-                                if (res4) {
-                                    console.log(dataDto.data[condition.itemId], item.title)
-                                    rReason.push(item.title + ' 需要为不空 ')
-                                }
-                                return res4
-                            //复选值 其值为
-                            case 'include':
-                                let res5 = false
-                                if (Array.isArray(dataDto.data[condition.itemId])) {
-                                    // dataDto.data[]
-                                    res5 = !dataDto.data[condition.itemId].includes(condition.conditionsValue)
-                                    if (res5) {
-                                        rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
-                                    }
-                                } else if (typeof dataDto.data[condition.itemId] === 'string') {
-                                    res5 = !(dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
-                                    if (res5)
-                                        rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
-                                } else {
-                                    throw new BadRequestException('error type of' + item.title, 'new array of string')
-                                }
-                                return res5
-                                break
-                            case 'exclude':
-                                let res6 = false
-                                if (Array.isArray(dataDto.data[condition.itemId])) {
-                                    // dataDto.data[]
-                                    res6 = dataDto.data[condition.itemId].includes(condition.conditionsValue)
-                                    if (res6) {
-                                        rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
-                                    }
-                                } else if (typeof dataDto.data[condition.itemId] === 'string') {
-                                    res6 = (dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
-                                    if (res6)
-                                        rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
-                                } else {
-                                    throw new BadRequestException('error type of' + item.title, 'new array of string')
-                                }
-                                return res6
-                            default:
-                                throw new BadRequestException('未定义的提交校验条件')
-                        }
-                    })
-                    if (!firstUnPassCondition) {
+                    const find = this.customEdgePass(targetEdge, form, dataDto, rReason)
+                    if (!find) {
                         //该流程通过
-                        customPassEdge.push(edge)
+                        customPassEdge.push(targetEdge)
                     }
-
                 }
-                if (edge.flow.conditiontype === 'undefined') {
+                if (targetEdge.flow.conditiontype === 'custom' && !targetEdge.flow.conditions) {
+                    customPassEdge.push(targetEdge)
+                }
+                if (targetEdge.flow.conditiontype === 'undefined') {
                     //该流程直接通过
-                    passEdge.push(edge)
+                    passEdge.push(targetEdge)
                 }
             })
             //else 规则校验 当具有自定义的edge全部未通过时通过
             if (customPassEdge.length === 0)
-                procedureEdges.forEach((e) => {
+                doNodeProcedure.forEach((e) => {
                     if (e.flow.conditiontype === 'else') {
                         passEdge.push(e)
                     }
                 })
             passEdge.push(...customPassEdge)
             //对通过的edge进行处理 生成代办事项 每个人/部门一条？
-            const toDo = []
             if (passEdge.length === 0) {
                 logData.result = '不满足任意流转条件，无法进入下一个流程'
                 logData.resultStatus = 'error'
                 await LogProcedure.create(logData)
                 throw new BadRequestException(rReason.join(' 或者 '))
             }
-            for (const edge of passEdge) {
+            const userTaskTodo = []
+            const receiveTaskTodo = []
+            let endFlow = false
+            for (const targetEdge of passEdge) {
                 const targetNode = procedure.nodes.find((node) => {
-                    return node.id === edge.target
+                    return node.id === targetEdge.target
+                })
+                const saveNode = procedure.nodes.find((node) => {
+                    return node.id === targetEdge.source
                 })
                 if (targetNode.clazz === 'end') {
                     // FormData.sequelize.transaction(t => {})
@@ -354,30 +290,27 @@ export class FormDataService {
                     logData.result = '流程结束'
                     logData.resultStatus = 'end'
                     LogProcedure.create(logData)
-                    await this.endFlow(form.id, formData.dataGroup, formData.currentProcedureNodeId, user, formData)
-                    return '流程结束';
+                    endFlow = true
                 }
                 // if (targetNode.)
                 //组装简报
                 const briefData: any = {}
-                if (targetNode.letter && targetNode.letter.length !== 0)
-                    targetNode.letter.filter((s) => {
+                if (saveNode.letter && saveNode.letter.length !== 0)
+                    saveNode.letter.filter((s) => {
                         return s.includes(':brief')
                     }).map((s) => {
                         const id = s.replace(':brief', '')
                         const item = form.items.find((i) => {
                             return i.id === id
                         })
-                        if (item)
+                        if (item && typeof formData.data[id] === 'string')
                             briefData[id] = {
                                 label: item.title,
                                 value: formData.data[id]
                             }
                     })
-
-
-                toDo.push({
-                    status: targetNode.clazz==='receiveTask'?'2':'1',
+                const todoRow = {
+                    status: targetNode.clazz === 'receiveTask' ? '2' : '1',
                     targetUserId: targetNode && targetNode.assignPerson,
                     targetDeptId: targetNode && targetNode.assignDept,
                     formId: form.id,
@@ -389,15 +322,26 @@ export class FormDataService {
                     nodeName: targetNode.label,
                     type: targetNode.clazz,
                     //edge
-                    edgeId: edge.id,
+                    edgeId: targetEdge.id,
                     preTodoId: dataDto.todoId || '0'
-                })
+                }
+                if (targetNode.clazz === 'receiveTask')
+                    receiveTaskTodo.push(todoRow)
+                if (targetNode.clazz === 'userTask') {
+                    userTaskTodo.push(todoRow)
+                }
             }
             logData.result = '处理成功'
             logData.resultStatus = 'success'
 
             //创建日志
             LogProcedure.create(logData)
+            if (endFlow === true || userTaskTodo.length === 0) {
+                //流程结束前处理代办事项
+                // this.formTodoService.bulkCreate(receiveTaskTodo)
+                await this.endFlow(form.id, formData.dataGroup, formData.currentProcedureNodeId, user, formData, receiveTaskTodo)
+                return '流程结束';
+            }
             const ps = []
             if (dataDto.todoId) {
                 ps.push(FormTodo.update({status: '2', dealUserId: user.id}, {
@@ -409,14 +353,14 @@ export class FormDataService {
                     //处理老代办事项 修改状态
                     ...ps,
                     //创建代办事项
-                    this.formTodoService.bulkCreate(toDo),
+                    this.formTodoService.bulkCreate([...userTaskTodo, ...receiveTaskTodo]),
                     //创建 formData
                     FormData.create(formData)
                 ])
             })
             return '提交成功'
         } else {
-            //未找到流转规则 流程结束
+            //该节点没有任何后续节点 流程结束
             formData.currentProcedureNodeId = endNode.id
             logData.action = endNode.name
             logData.result = '流程结束'
@@ -466,6 +410,77 @@ export class FormDataService {
         return FormData.findOne({
             where: {
                 todoId
+            }
+        })
+    }
+
+
+    customEdgePass(targetEdge, form, dataDto, rReason,) {
+        return targetEdge.flow.conditions.find((condition) => {
+            const item = form.items.find((i) => {
+                return i.id === condition.itemId
+            })
+            switch (condition.conditionsRule) {
+                case 'equal':
+                    let res = false
+                    res = dataDto.data[condition.itemId] !== condition.conditionsValue
+                    if (res)
+                        rReason.push(item.title + ' 需要等于 ' + condition.conditionsValue)
+                    return res
+                case 'notEqual':
+                    let res2 = false
+                    res2 = dataDto.data[condition.itemId] === condition.conditionsValue
+                    if (res2)
+                        rReason.push(item.title + ' 需要不等于 ' + condition.conditionsValue)
+                    return res2
+                case 'null':
+                    const res3 = !!dataDto.data[condition.itemId]
+                    if (res)
+                        rReason.push(item.title + ' 需要为空 ')
+                    return res3
+                case 'notNull':
+                    const res4 = !dataDto.data[condition.itemId]
+                    if (res4) {
+                        console.log(dataDto.data[condition.itemId], item.title)
+                        rReason.push(item.title + ' 需要为不空 ')
+                    }
+                    return res4
+                //复选值 其值为
+                case 'include':
+                    let res5 = false
+                    if (Array.isArray(dataDto.data[condition.itemId])) {
+                        // dataDto.data[]
+                        res5 = !dataDto.data[condition.itemId].includes(condition.conditionsValue)
+                        if (res5) {
+                            rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
+                        }
+                    } else if (typeof dataDto.data[condition.itemId] === 'string') {
+                        res5 = !(dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
+                        if (res5)
+                            rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
+                    } else {
+                        throw new BadRequestException('error type of' + item.title, 'new array of string')
+                    }
+                    return res5
+                    break
+                case 'exclude':
+                    let res6 = false
+                    if (Array.isArray(dataDto.data[condition.itemId])) {
+                        // dataDto.data[]
+                        res6 = dataDto.data[condition.itemId].includes(condition.conditionsValue)
+                        if (res6) {
+                            rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
+                        }
+                    } else if (typeof dataDto.data[condition.itemId] === 'string') {
+                        res6 = (dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
+                        if (res6)
+                            rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
+                    } else {
+                        throw new BadRequestException('error type of' + item.title, 'new array of string')
+                    }
+                    return res6
+                default:
+                    throw new BadRequestException('未定义的提交校验条件')
             }
         })
     }

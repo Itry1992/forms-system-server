@@ -20,6 +20,7 @@ import {JwtAuthGuard} from "../../auth/auth.guard";
 import Form from "../../entity/form.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import {Op} from "sequelize";
+import {elementAt} from "rxjs/operators";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -40,6 +41,49 @@ export class FormDataController {
         const res: any = ResponseUtil.page(data)
         res.items = form.items
         return res
+    }
+
+    @Get('/finishedByUser/list')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo) {
+        const user: User = req.user
+        const page = await FormData.findAndCountAll({
+            where: {
+                createUserId: user.id
+            },
+            include: [{
+                model: Form,
+                attributes: ['name', 'id']
+            }],
+            attributes: {exclude: ['data']},
+            limit: pageQueryVo.limit(),
+            offset: pageQueryVo.offset()
+        })
+        return ResponseUtil.page(page)
+    }
+
+    @Get('/finishedByUser/detail/:id')
+    async finishedByUserDetail(@Param('id') id: string) {
+        const formData: FormData = await FormData.findByPk(id, {
+            include: [{
+                model: Form,
+            }]
+        })
+        if (!formData) {
+            throw new BadRequestException('no formData whit id ' + id)
+        }
+        //filter itmes
+        const form = formData.form
+        const items = formData.form.items.filter((i) => {
+            return !!formData.data[i.id]
+        }).map((i) => {
+            i.visible = true
+            i.enable = false
+            return i
+        })
+        form.items = items
+        return {success: true, data: {data: formData.data, form, status: '2'}}
     }
 
     @Post('/add/:formId')
@@ -137,7 +181,6 @@ export class FormDataController {
     @ApiBearerAuth()
     @ApiOperation({description: '获取已完成代办事项对应的id'})
     async history(@Param('todoId') todoId: string) {
-        // todo 具体的数据
         const todo: FormTodo = await this.formTodoService.findByPK(todoId)
         if (!todo)
             throw new BadRequestException('no entity todo with this id')
@@ -153,7 +196,14 @@ export class FormDataController {
         res.form.items = res.items
 
         //data
-        const formData = await this.formDataService.findByTodoId(todoId)
+        let formData;
+        if (todo.type === 'receiveTask') {
+            if (todo.preTodoId)
+                formData = await this.formDataService.findByTodoId(todo.preTodoId)
+            else
+                formData = await  this.formDataService.findByTodo(todo,todo.edge.source)
+        } else
+            formData = await this.formDataService.findByTodoId(todoId)
         return {success: true, data: {form: res.form, data: formData && formData.data, todoId, status: todo.status}}
     }
 
@@ -169,10 +219,10 @@ export class FormDataController {
                 dataGroup: todo.formDataGroup
             }, include: [{
                 model: ProcedureNode,
-                where:{
-                    clazz:{[Op.ne]:'start'}
+                where: {
+                    clazz: {[Op.ne]: 'start'}
                 },
-                attributes:['label']
+                attributes: ['label']
             }]
         })
 

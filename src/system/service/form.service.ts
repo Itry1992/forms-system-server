@@ -10,6 +10,8 @@ import Procedure from "../../entity/procedure.entity";
 import {ProcedureService} from "./procedure.service";
 import {FormWriteableDto} from "../dto/form.writeable.dto";
 import User from "../../entity/User.entity";
+import FormTodo from "../../entity/form.todo.entity";
+import ProcedureNode from "../../entity/procedure.node.entity";
 
 @Injectable()
 export class FormService {
@@ -40,8 +42,32 @@ export class FormService {
     }
 
     async update(id: string, form: Form) {
-        return Form.update(form, {
+        const todo = await FormTodo.findOne({
+            where: {
+                formId: id
+            }
+        })
+        const ps = []
+
+        if (todo) {
+            //删除流程  代办事项  流程附表
+            ps.push(FormTodo.destroy({where: {formId: id}}))
+            ps.push(Procedure.destroy({where:{formId:id}}).then(()=>{
+               return  Promise.all([
+                    ProcedureNode.destroy({where:{
+                            procedureId:null
+                        }}),
+                    ProcedureNode.destroy({where:{
+                            procedureId:null
+                        }}),
+                ])
+            }))
+        }
+        ps.push(Form.update(form, {
             where: {id}
+        }))
+        return Form.sequelize.transaction(t => {
+            return Promise.all(ps)
         })
     }
 
@@ -135,10 +161,10 @@ export class FormService {
             where: whereOpt,
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset(),
-            attributes:['id','name','createdAt'],
-            include:[{
-                model:Dept,
-                attributes:['id','name']
+            attributes: ['id', 'name', 'createdAt'],
+            include: [{
+                model: Dept,
+                attributes: ['id', 'name']
             }]
         })
     }
