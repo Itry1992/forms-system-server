@@ -1,10 +1,11 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, Injectable} from "@nestjs/common";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import User from "../../entity/User.entity";
 import {Op} from "sequelize";
 import {ResponseUtil} from "../../common/response.util";
 import SysRole from "../../entity/sys.role.entity";
 import DeptUsersEntity from "../../entity/dept.users.entity";
+import {ArrayUtil} from "../../common/util/array.util";
 
 @Injectable()
 export class UserService {
@@ -68,9 +69,7 @@ export class UserService {
     }
 
     async deleteAssociation(userId: string, deptId?: string) {
-        return DeptUsersEntity.destroy({
-            where: {userId}
-        })
+        // return
     }
 
     async updateAssociation(userId: string, newDeptId: string, rootDeptId: string) {
@@ -88,7 +87,12 @@ export class UserService {
     }
 
     async bulkDeleteAssociation(userIds: string) {
-        return DeptUsersEntity.destroy({
+        //被删除的人员会被自动归属到 顶级部门
+        const firstUser: User = await User.findByPk(userIds.split(',')[0])
+        if (!firstUser) {
+            throw new BadRequestException('用户不存在')
+        }
+        return DeptUsersEntity.update({deptId: firstUser.rootDeptId}, {
             where: {
                 userId: {[Op.in]: userIds.split(',')}
             }
@@ -99,7 +103,7 @@ export class UserService {
         return User.findAll()
     }
 
-    async bulkAddAssociation(userIds: string, targetDeptId: string) {
+    async bulkAddAssociation(userIds: string, targetDeptId: string, rootDeptId: string) {
         return DeptUsersEntity.sequelize.transaction(t => {
             return DeptUsersEntity.destroy({
                 where: {userId: {[Op.in]: userIds.split(',')}}
@@ -110,7 +114,13 @@ export class UserService {
                         userId, deptId: targetDeptId
                     })
                 })
-                return DeptUsersEntity.bulkCreate(data)
+                return Promise.all([
+                    DeptUsersEntity.bulkCreate(data),
+                    User.update({rootDeptId}, {
+                        where: {id: {[Op.in]: userIds.split(',')}}
+                    })
+                ])
+                return res
             })
         })
     }

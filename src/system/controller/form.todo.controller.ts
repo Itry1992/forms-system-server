@@ -9,11 +9,13 @@ import {PageQueryVo} from "../../common/pageQuery.vo";
 import {ResponseUtil} from "../../common/response.util";
 import {AdminGuard} from "../../auth/admin.guard";
 import {domainToUnicode} from "url";
+import {FormDataService} from "../service/form.data.service";
 
 @Controller('/formTodo')
 @ApiTags('待办事项')
 export class FormTodoController {
-    constructor(private readonly formTodoService: FormTodoService) {
+    constructor(private readonly formTodoService: FormTodoService,
+                private readonly formDataService: FormDataService) {
     }
 
     @Get('/list/:status')
@@ -21,12 +23,13 @@ export class FormTodoController {
     @ApiBearerAuth()
     @ApiOperation({description: "获取当前登陆用户的代办事项 status===1 代办事项 status===2 我处理的 3, '抄送' 4 我发起的 "})
     async listByCurrentUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo, @Param('status') status: string) {
-        if (status==='2')
+        if (status === '2')
             return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, null, 'userTask', true))
         if (status === '3')
             return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, null, 'receiveTask'))
-        if (status==='4')
-            return ResponseUtil.page(await this.formTodoService.createByUser(req.user, pageQueryVo))
+        if (status === '4')
+            // return ResponseUtil.page(await this.formTodoService.createByUser(req.user, pageQueryVo))
+            return  ResponseUtil.page(await this.formDataService.startDataList(req.user,pageQueryVo))
         return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, status, 'userTask'))
     }
 

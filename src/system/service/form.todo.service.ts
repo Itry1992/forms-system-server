@@ -1,9 +1,10 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, Injectable} from "@nestjs/common";
 import FormTodo from "../../entity/form.todo.entity";
 import User from "../../entity/User.entity";
 import {Op} from "sequelize";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
+import FormData from "../../entity/form.data.entity";
 
 @Injectable()
 export class FormTodoService {
@@ -104,5 +105,32 @@ export class FormTodoService {
             offset: pageQueryVo.offset(),
             order: [['createdAt', 'DESC']]
         });
+    }
+
+    async getGroup(todoId: string, formDataId: string) {
+        let formId = ''
+        let formDataGroup = ''
+        if (todoId) {
+            const todo: FormTodo = await FormTodo.findByPk(todoId)
+            if (todo) {
+                formId = todo.formId
+                formDataGroup = todo.formDataGroup
+                return {formId, formDataGroup}
+            }
+        }
+        if (formDataId) {
+            const formData = await FormData.findByPk(formDataId, {
+                attributes: ['formId', 'dataGroup']
+            })
+            if (formData) {
+                formId = formData.formId
+                formDataGroup = formData.dataGroup
+                return {formId, formDataGroup}
+            }
+        }
+
+        throw new BadRequestException('需要正确的 todoId 或者 formId' + todoId + formId)
+
+
     }
 }

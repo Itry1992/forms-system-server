@@ -51,7 +51,11 @@ export class ProcedureController {
             }
         })
         if (todo) {
-            throw new BadRequestException('此表单已有数据，无法修改流程')
+            //删除todo数据
+            FormTodo.destroy({where:{
+                    formId,
+                }})
+            // throw new BadRequestException('此表单已有数据，无法修改流程')
         }
 
         return ResponseUtil.success(await this.procedureService.upsert(procedure, formId))

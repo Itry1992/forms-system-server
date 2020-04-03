@@ -47,7 +47,7 @@ export class JwtAuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const header = request.header('Authorization')
         if (!header)
-            throw new BadRequestException('no token')
+            throw new BadRequestException('请登陆')
         const payload = this.authService.verify(header.substring(7)).then((payload) => {
             return payload
         }).catch((e) => {

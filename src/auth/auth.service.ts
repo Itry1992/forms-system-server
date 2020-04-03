@@ -3,6 +3,7 @@ import {Injectable, Inject, forwardRef} from '@nestjs/common';
 import {JwtService} from '@nestjs/jwt';
 import User from "../entity/User.entity";
 import Dept from "../entity/Dept.entity";
+import SysRole from "../entity/sys.role.entity";
 
 
 @Injectable()
@@ -19,6 +20,9 @@ export class AuthService {
             },
             include:[{
                 model:Dept,
+                attributes:['id','name']
+            },{
+                model:SysRole,
                 attributes:['id','name']
             }]
         });

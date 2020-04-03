@@ -29,23 +29,24 @@ export class FileController {
     }
 
     @Post('/addBase64Url')
-    async addBase64Url(@Body() d: Base64UploadDto ) {
+    async addBase64Url(@Body() d: Base64UploadDto) {
         const basePath = FileUploadConfig.getUrl()
         if (!Fs.existsSync(basePath + '/handSign')) {
             Fs.mkdirSync(basePath + '/handSign');
         }
-        const filePath = basePath + '/handSign/' + uuid.v1() + '.jpg'
+        const r = uuid.v1()
+        const filePath = basePath + '/handSign/' + r + '.jpg'
 
         const b = d.value
-        if (!b||!b.startsWith('data:image/png;base64,'))
+        if (!b || !b.startsWith('data:image/png;base64,'))
             return ResponseUtil.error('string not start data:image/png;base64,')
-        const b2 =b.replace(/^data:image\/\w+;base64,/, "")
+        const b2 = b.replace(/^data:image\/\w+;base64,/, "")
 
 
-        const buffer = Buffer.from(b2,'base64')
+        const buffer = Buffer.from(b2, 'base64')
         fs.writeFileSync(filePath, buffer)
         return await Attachment.create({
-            localPath: filePath,
+            localPath: '/handSign/' + r + '.jpg',
             // size: '',
             fileType: 'image/jpeg',
             // originalName: file.originalname,

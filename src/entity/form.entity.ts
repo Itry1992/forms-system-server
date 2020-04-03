@@ -107,4 +107,5 @@ export default class Form extends Model {
 
     @Column
     password: string
+
 }

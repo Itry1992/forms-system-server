@@ -15,6 +15,7 @@ async function bootstrap() {
 
 
     app.use(express.json({limit: '50mb'}));
+    // if (process.env.)
     const options = new DocumentBuilder()
         .addBearerAuth()
         .setTitle(' API')

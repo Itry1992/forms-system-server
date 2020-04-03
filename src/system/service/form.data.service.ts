@@ -280,9 +280,6 @@ export class FormDataService {
                 const targetNode = procedure.nodes.find((node) => {
                     return node.id === targetEdge.target
                 })
-                const saveNode = procedure.nodes.find((node) => {
-                    return node.id === targetEdge.source
-                })
                 if (targetNode.clazz === 'end') {
                     // FormData.sequelize.transaction(t => {})
                     //进入流程结束
@@ -294,21 +291,7 @@ export class FormDataService {
                 }
                 // if (targetNode.)
                 //组装简报
-                const briefData: any = {}
-                if (saveNode.letter && saveNode.letter.length !== 0)
-                    saveNode.letter.filter((s) => {
-                        return s.includes(':brief')
-                    }).map((s) => {
-                        const id = s.replace(':brief', '')
-                        const item = form.items.find((i) => {
-                            return i.id === id
-                        })
-                        if (item && typeof formData.data[id] === 'string')
-                            briefData[id] = {
-                                label: item.title,
-                                value: formData.data[id]
-                            }
-                    })
+                const briefData: any = this.briefData(targetNode,formData,form)
                 const todoRow = {
                     status: targetNode.clazz === 'receiveTask' ? '2' : '1',
                     targetUserId: targetNode && targetNode.assignPerson,
@@ -333,6 +316,13 @@ export class FormDataService {
             }
             logData.result = '处理成功'
             logData.resultStatus = 'success'
+
+            //formData 简报组装
+            const saveNode = procedure.nodes.find((node) => {
+                return node.id === formData.currentProcedureNodeId
+            })
+
+            formData.briefData = this.briefData(saveNode,formData,form)
 
             //创建日志
             LogProcedure.create(logData)
@@ -483,5 +473,42 @@ export class FormDataService {
                     throw new BadRequestException('未定义的提交校验条件')
             }
         })
+    }
+
+    async startDataList(user: User, pageQueryVo: PageQueryVo) {
+        //
+        return FormData.findAndCountAll({
+            where: {
+                createUserId: user.id,
+                endData: 'start'
+            },
+            include: [{
+                model: Form,
+                attributes: ['id', 'name']
+            }],
+            attributes: {exclude: ['data']},
+            order:[['updatedAt','DESC']],
+            limit: pageQueryVo.limit(),
+            offset: pageQueryVo.offset()
+        });
+    }
+
+    private briefData (node: ProcedureNode, formData, form : Form) {
+        const briefData: any = {}
+        if (node.letter && node.letter.length !== 0)
+            node.letter.filter((s) => {
+                return s.includes(':brief')
+            }).map((s) => {
+                const id = s.replace(':brief', '')
+                const item = form.items.find((i) => {
+                    return i.id === id
+                })
+                if (item && typeof formData.data[id] === 'string')
+                    briefData[id] = {
+                        label: item.title,
+                        value: formData.data[id]
+                    }
+            })
+        return briefData
     }
 }

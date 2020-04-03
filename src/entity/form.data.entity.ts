@@ -75,5 +75,10 @@ export default class FormData extends Model {
     @Column
     endData: 'start' | 'end' | 'task'
 
+    @Column({
+        type: DataType.JSONB
+    })
+    briefData: any
+
 
 }

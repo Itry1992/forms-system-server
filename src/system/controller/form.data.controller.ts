@@ -19,8 +19,7 @@ import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import Form from "../../entity/form.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
-import {Op} from "sequelize";
-import {elementAt} from "rxjs/operators";
+import {Op, where} from "sequelize";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -46,17 +45,21 @@ export class FormDataController {
     @Get('/finishedByUser/list')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
+    @ApiOperation({description: '表单数据'})
     async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo) {
+        // debugger
         const user: User = req.user
         const page = await FormData.findAndCountAll({
             where: {
-                createUserId: user.id
+                createUserId: user.id,
+                endData: 'end',
             },
             include: [{
                 model: Form,
                 attributes: ['name', 'id']
             }],
             attributes: {exclude: ['data']},
+            order:[['updatedAt','DESC']],
             limit: pageQueryVo.limit(),
             offset: pageQueryVo.offset()
         })
@@ -64,6 +67,7 @@ export class FormDataController {
     }
 
     @Get('/finishedByUser/detail/:id')
+    @ApiOperation({description: '表单数据'})
     async finishedByUserDetail(@Param('id') id: string) {
         const formData: FormData = await FormData.findByPk(id, {
             include: [{
@@ -83,7 +87,7 @@ export class FormDataController {
             return i
         })
         form.items = items
-        return {success: true, data: {data: formData.data, form, status: '2'}}
+        return {success: true, data: {data: formData.data, todoId: formData.todoId, form, status: '2'}}
     }
 
     @Post('/add/:formId')
@@ -151,10 +155,16 @@ export class FormDataController {
         const todo: FormTodo = await this.formTodoService.findByPK(todoId)
         if (!todo)
             return ResponseUtil.error('no entity whit this id')
-        const formData: FormData = await this.formDataService.findByTodo(todo)
         const form: Form = await Form.findByPk(todo.formId)
-        if (!form)
+        if (!form) {
+            FormTodo.destroy({
+                where: {id: todoId}
+            })
             throw new BadRequestException('对应表单不存在')
+        }
+
+        const formData: FormData = await this.formDataService.findByTodo(todo)
+
         const res = await this.formService.toSubmit(form, todo.edge.target)
         res.form.items = res.items
         return {success: true, data: {form: res.form, data: formData.data, todoId, node: res.node, status: todo.status}}
@@ -201,36 +211,33 @@ export class FormDataController {
             if (todo.preTodoId)
                 formData = await this.formDataService.findByTodoId(todo.preTodoId)
             else
-                formData = await  this.formDataService.findByTodo(todo,todo.edge.source)
+                formData = await this.formDataService.findByTodo(todo, todo.edge.source)
         } else
             formData = await this.formDataService.findByTodoId(todoId)
         return {success: true, data: {form: res.form, data: formData && formData.data, todoId, status: todo.status}}
     }
 
-    @Get('/allSuggest/:todoId')
-    async allSuggest(@Param('todoId') todoId: string) {
-        const todo: FormTodo = await FormTodo.findByPk(todoId)
-        if (!todo)
-            throw new BadRequestException('no entity todo with this id')
-
+    @Get('/allSuggest')
+    async allSuggest(@Query('todoId') todoId: string,@Query('formDataId') formDataId?: string) {
+        const d =  await  this.formTodoService.getGroup(todoId,formDataId)
         const data: FormData[] = await FormData.findAll({
             where: {
-                formId: todo.formId,
-                dataGroup: todo.formDataGroup
+                formId:d.formId,
+                dataGroup:d.formDataGroup
             }, include: [{
                 model: ProcedureNode,
                 where: {
                     clazz: {[Op.ne]: 'start'}
                 },
                 attributes: ['label']
-            }]
+            }],
+            attributes:{
+                exclude:['data']
+            }
+
         })
 
-        const res = data.map((d) => {
-            d.data = null
-            return d
-        })
-        return ResponseUtil.success(res)
+        return ResponseUtil.success(data)
     }
 
 

@@ -6,21 +6,25 @@ import {PageQueryVo} from "../../common/pageQuery.vo";
 import FormComment from "../../entity/form.comment.entity";
 import FormTodo from "../../entity/form.todo.entity";
 import {ResponseUtil} from "../../common/response.util";
+import {FormTodoService} from "../service/form.todo.service";
 
 @Controller('/formComment')
 @ApiTags('评论')
 export class FormCommentController {
+    constructor(private readonly formTodoService: FormTodoService) {
+    }
+
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    @Get('/list/:todoId')
-    async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Param('todoId') todoId: string) {
-        const todo: FormTodo = await FormTodo.findByPk(todoId)
-        if (!todo)
-            return ResponseUtil.error('no entity todo whit ' + todoId)
+    @Get('/list')
+    async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Query('todoId') todoId: string,
+               @Query('formDataId') formDataId: string) {
+
+        const d = await this.formTodoService.getGroup(todoId, formDataId)
         const page = await FormComment.findAndCountAll({
             where: {
-                formId: todo.formId,
-                groupId: todo.formDataGroup
+                formId: d.formId,
+                groupId: d.formDataGroup
             },
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset()
@@ -30,13 +34,13 @@ export class FormCommentController {
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    @Post('/add/:todoId')
-    async add(@Body() comment: FormComment, @Req() req, @Param('todoId') todoId: string) {
-        const todo: FormTodo = await FormTodo.findByPk(todoId)
-        if (!todo)
-            return ResponseUtil.error('no entity todo whit ' + todoId)
-        comment.formId = todo.formId
-        comment.groupId  = todo.formDataGroup
+    @Post('/add')
+    async add(@Body() comment: FormComment, @Req() req, @Query('todoId') todoId: string,
+              @Query('formDataId') formDataId: string) {
+
+        const d = await  this.formTodoService.getGroup(todoId,formDataId)
+        comment.formId = d.formId
+        comment.groupId = d.formDataGroup
         comment.createUserId = req.user.id
         comment.createUserName = req.user.name
         return ResponseUtil.success(await FormComment.create(comment))

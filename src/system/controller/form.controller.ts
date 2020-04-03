@@ -113,8 +113,10 @@ export class FormController {
     async toSubmit(@Param('id') id: string) {
         //formId
         const form: Form = await Form.findByPk(id)
-        if (!form)
+        if (!form){
             throw new BadRequestException('对应表单不存在')
+        }
+
         const res = await this.formService.toSubmit(form)
         form.items = res.items
         return ResponseUtil.success(form)
@@ -166,7 +168,7 @@ export class FormController {
             formWriteableDto.users = []
         if (!formWriteableDto.depts)
             formWriteableDto.depts = []
-        if (formWriteableDto.publicUrl)
+        if (!formWriteableDto.publicUrl)
             formWriteableDto.publicUrl = '0'
         const res = await this.formService.updateWriteAble(formWriteableDto, formId)
         return ResponseUtil.success(res)

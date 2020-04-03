@@ -9,6 +9,7 @@ import {ResponseUtil} from "../../common/response.util";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import {UserCreateDto} from "../dto/user.create.dto";
 import Dept from "../../entity/Dept.entity";
+import {AdminGuard} from "../../auth/admin.guard";
 
 @Controller('/user/dept')
 @ApiTags('用户和部门关系维护')
@@ -73,6 +74,8 @@ export class UserDeptController {
     @Get('/updateAssociation/:userId/:newDeptId')
     @ApiOperation({description: '移动目标user到新的部门，可以用于没有dept关联的user加入到新的dept'})
     async update(@Param('userId') userId: string, @Param('newDeptId') newDeptId: string) {
+        //
+
         const  dept = await Dept.findByPk(newDeptId)
         const  root = await this.deptService.findRoot(dept)
 
@@ -81,21 +84,28 @@ export class UserDeptController {
     }
 
     @Get('/bulkAddAssociation')
+    @UseGuards(JwtAuthGuard,AdminGuard)
     async bulkAddAssociation(@Query('userIds') userIds: string,
                              @Query('targetDeptId') targetDeptId: string) {
-        await this.userService.bulkAddAssociation(userIds, targetDeptId)
+        //only
+        const  dept = await Dept.findByPk(targetDeptId)
+        const  root = await this.deptService.findRoot(dept)
+
+        await this.userService.bulkAddAssociation(userIds, targetDeptId,root.id)
         return ResponseUtil.success()
     }
 
     @Get('/delete/:userId')
-    @ApiOperation({description: '删除关系 不删除用户 删除用户使用/user/delete/:id'})
+    @UseGuards(JwtAuthGuard,AdminGuard)
+    @ApiOperation({description: '删除关系 不删除用户 删除用户使用/user/delete/:id 被删除的用户将会自动的归属到顶级部门'})
     async delete(@Param('userId')userId: string) {
-        const data = await this.userService.deleteAssociation(userId)
+        const data = await this.userService.bulkDeleteAssociation(userId)
         return ResponseUtil.success(data)
     }
 
     @Get('/bulkDelete')
-    @ApiOperation({description: 'ids 使用‘,’分割删除该用户列表的部门关联'})
+    @UseGuards(JwtAuthGuard,AdminGuard)
+    @ApiOperation({description: 'ids 使用‘,’分割删除该用户列表的部门关联  被删除的用户将会自动的归属到顶级部门'})
     async bulkDelete(@Query('ids') userIds: string) {
         await this.userService.bulkDeleteAssociation(userIds)
         return ResponseUtil.success()

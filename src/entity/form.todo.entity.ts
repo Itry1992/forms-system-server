@@ -67,7 +67,8 @@ export default class FormTodo extends Model {
     createUserId: string
 
     @Column
-    status: '1' | '2'
+        //1 未处理 2已处理 3已经到达end节点
+    status: '1' | '2' | '3'
 
     // @CreatedAt
     // createdAt : Date
