@@ -29,6 +29,7 @@
     "@nestjs/swagger": "latest",
     "cls-hooked": "^4.2.2",
     "exceljs": "^3.8.2",
+    "images": "^3.0.2",
     "moment": "^2.24.0",
     "node-uuid": "^1.4.8",
     "node-xlsx": "latest",

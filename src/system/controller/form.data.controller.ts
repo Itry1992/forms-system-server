@@ -31,7 +31,7 @@ export class FormDataController {
     }
 
     @Get('/list/:formId')
-    @ApiOperation({description: '流程表单不会返回未审核数据'})
+    @ApiOperation({description: '返回全部的数据'})
     async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Param('formId')formId: string) {
         const form: Form = await Form.findByPk(formId)
         if (!form)
@@ -46,20 +46,21 @@ export class FormDataController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({description: '表单数据'})
-    async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo) {
+    async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo,@Query('formId') formId: string) {
         // debugger
         const user: User = req.user
         const page = await FormData.findAndCountAll({
             where: {
                 createUserId: user.id,
                 endData: 'end',
+                formId,
             },
             include: [{
                 model: Form,
                 attributes: ['name', 'id']
             }],
             attributes: {exclude: ['data']},
-            order:[['updatedAt','DESC']],
+            order: [['updatedAt', 'DESC']],
             limit: pageQueryVo.limit(),
             offset: pageQueryVo.offset()
         })
@@ -87,7 +88,7 @@ export class FormDataController {
             return i
         })
         form.items = items
-        return {success: true, data: {data: formData.data, todoId: formData.todoId, form, status: '2'}}
+        return {success: true, data: {data: formData.data, todoId: formData.todoId, form, status: '2', formDataId: id}}
     }
 
     @Post('/add/:formId')
@@ -218,12 +219,12 @@ export class FormDataController {
     }
 
     @Get('/allSuggest')
-    async allSuggest(@Query('todoId') todoId: string,@Query('formDataId') formDataId?: string) {
-        const d =  await  this.formTodoService.getGroup(todoId,formDataId)
+    async allSuggest(@Query('todoId') todoId: string, @Query('formDataId') formDataId?: string) {
+        const d = await this.formTodoService.getGroup(todoId, formDataId)
         const data: FormData[] = await FormData.findAll({
             where: {
-                formId:d.formId,
-                dataGroup:d.formDataGroup
+                formId: d.formId,
+                dataGroup: d.formDataGroup
             }, include: [{
                 model: ProcedureNode,
                 where: {
@@ -231,8 +232,8 @@ export class FormDataController {
                 },
                 attributes: ['label']
             }],
-            attributes:{
-                exclude:['data']
+            attributes: {
+                exclude: ['data']
             }
 
         })

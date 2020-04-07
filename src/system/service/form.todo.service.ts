@@ -2,9 +2,11 @@ import {BadRequestException, Injectable} from "@nestjs/common";
 import FormTodo from "../../entity/form.todo.entity";
 import User from "../../entity/User.entity";
 import {Op} from "sequelize";
+import {Sequelize} from 'sequelize-typescript';
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
 import FormData from "../../entity/form.data.entity";
+import Form from "../../entity/form.entity";
 
 @Injectable()
 export class FormTodoService {
@@ -31,7 +33,7 @@ export class FormTodoService {
         })
     }
 
-    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string, type: string, currentUserDeal?: boolean) {
+    async findByUser(user: User, pageQueryVo: PageQueryVo, status: string, type: string, currentUserDeal?: boolean, formId?: string) {
         const userOpt = this.getUserOpt(user)
         const statusOpt: any = {}
         if (status === '1')
@@ -42,6 +44,9 @@ export class FormTodoService {
         if (currentUserDeal === true) {
             statusOpt.status = '2'
             statusOpt.dealUserId = user.id
+        }
+        if (formId) {
+            statusOpt.formId = formId
         }
         return FormTodo.findAndCountAll({
             where: {
@@ -130,7 +135,30 @@ export class FormTodoService {
         }
 
         throw new BadRequestException('需要正确的 todoId 或者 formId' + todoId + formId)
+    }
 
-
+    async groupByForm(user: User, status: string, type: string, dealByUser: boolean) {
+        const statusOpt: any = {}
+        if (status === '1')
+            statusOpt.status = '1'
+        if (status === '2') {
+            statusOpt.status = '2'
+        }
+        if (dealByUser === true) {
+            statusOpt.status = '2'
+            statusOpt.dealUserId = user.id
+        }
+        const userOpt = this.getUserOpt(user)
+        return FormTodo.findAll({
+            attributes: ['formId', [Sequelize.fn('COUNT', Sequelize.col('FormTodo.id')), 'formCount']],
+            include: [{model: Form, attributes: ['id', 'name'], required: true}],
+            group: [Sequelize.col('form_id'), Sequelize.col('form.id'), Sequelize.col('form.name'),],
+            where: {
+                // status: '1',
+                ...userOpt,
+                ...statusOpt,
+                type
+            },
+        })
     }
 }

@@ -2,6 +2,8 @@ import {BelongsTo, Column, CreatedAt, DataType, ForeignKey, Model, PrimaryKey, T
 import {UUIDV1} from "sequelize";
 import ProcedureEdge from "./procedure.edge.entity";
 import {Col} from "sequelize/types/lib/utils";
+import Form from "./form.entity";
+import {ApiHideProperty} from "@nestjs/swagger";
 
 @Table({
     underscored: true,
@@ -30,8 +32,12 @@ export default class FormTodo extends Model {
     @Column
     dealUserId: string
 
-    @Column
+    @ForeignKey(()=>Form)
     formId: string
+
+    @BelongsTo(()=>Form)
+    @ApiHideProperty()
+    form:Form
 
     @Column
     preTodoId: string

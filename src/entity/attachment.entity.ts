@@ -29,4 +29,7 @@ export  default class Attachment extends Model {
     description: string;
     @CreatedAt
     createTime: Date;
+
+    @Column
+    thumbPath: string
 }

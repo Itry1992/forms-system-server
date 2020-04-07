@@ -34,11 +34,12 @@ export class XlsxService {
             const item = form.items.find((i) => {
                 return i.id === id
             })
-            if (item.type === 'image' || item.type === 'signName') {
-                imageItems.push(item)
-            } else {
-                effectItems.push(item)
-            }
+            if (item)
+                if (item.type === 'image' || item.type === 'signName') {
+                    imageItems.push(item)
+                } else {
+                    effectItems.push(item)
+                }
         })
 
         // effectItems.push(imageItems)
@@ -52,7 +53,7 @@ export class XlsxService {
             headData.push({header: '创建时间', key: 'createTime', width: 20})
         }
 
-        if (formExportDto.createUser) {
+        if (formExportDto.createUserName) {
             effectItems.push(null)
             headData.push({header: '创建人', key: 'createUser', width: 20})
         }
@@ -61,12 +62,34 @@ export class XlsxService {
             effectItems.push(null)
             headData.push({header: '审核完成时间', key: 'produceNodeEndTime', width: 20})
         }
+        if (formExportDto.currentProcedureNode) {
+            effectItems.push(null)
+            headData.push({header: '节点名称', key: 'currentProcedureNode', width: 20})
+        }
+        if (formExportDto.dataGroupStatus) {
+            effectItems.push(null)
+            headData.push({header: '流程状态', key: 'dataGroupStatus', width: 20})
+        }
+        if (formExportDto.submitUserName) {
+            effectItems.push(null)
+            headData.push({header: '审核人', key: 'submitUserName', width: 20})
+        }
 
         imageItems.forEach((item: FormItemInterface) => {
-            headData.push({header: item.title || '', key: item.id, width: 40})
+            effectItems.push(item)
+            if (item.type === 'image') {
+                headData.push({header: item.title || '', key: item.id, width: 40})
+                headData.push({header: '', key: item.id + '1', width: 40})
+                headData.push({header: '', key: item.id + '2', width: 40})
+
+                effectItems.push(null)
+                effectItems.push(null)
+            }
+            if (item.type === 'signName')
+                headData.push({header: item.title || '', key: item.id, width: 40})
         })
 
-        effectItems.push(...imageItems)
+        // effectItems.push(...imageItems)
 
 
         worksheet.columns = headData
@@ -77,7 +100,7 @@ export class XlsxService {
         const promiseD = []
         const v = datas.map(async (d, rowIndex) => {
             const row = worksheet.getRow(rowIndex + 2)
-            row.height = 120
+            row.height = 60
             await headData.map(async (col, colIndex) => {
                 let cellData = datas[rowIndex].data[col.key]
                 if (col.key === 'createTime')
@@ -86,10 +109,21 @@ export class XlsxService {
                     cellData = datas[rowIndex].createUserName
                 if (col.key === 'produceNodeEndTime')
                     cellData = datas[rowIndex].updatedAt.toLocaleString()
-                const item = effectItems[colIndex]
-
+                if (col.key === 'currentProcedureNode')
+                    cellData = datas[rowIndex].currentProcedureNode?.name
+                if (col.key === 'dataGroupStatus')
+                    cellData = datas[rowIndex].dataGroupStatus === '1' ? '审核中' : '审核完成'
+                if (col.key === 'submitUserName')
+                    cellData = datas[rowIndex].submitUserName
+                    const item: FormItemInterface = effectItems[colIndex]
+                if (!cellData) {
+                    return ''
+                }
                 if (item && (item.type === 'image' || item.type === 'signName')) {
+                    row.height = 240
                     //本地图片处理if
+                    // item.onlyOneImage
+                    // if (item.o)
                     if (typeof cellData === 'string' && cellData.startsWith('data:image/png')) {
                         const image = workbook.addImage({
                             base64: cellData,
@@ -129,22 +163,41 @@ export class XlsxService {
                                                 extension = 'png'
                                                 break
                                         }
-                                        const image = workbook.addImage({
-                                            filename: FileUploadConfig.getUrl() + '/' + a.localPath,
-                                            extension,
-                                        });
+                                        let image
+                                        if (a.thumbPath && a.thumbPath !== '') {
+                                            //存在缩略图
+                                            image = workbook.addImage({
+                                                filename: FileUploadConfig.getUrl() + '/' + a.thumbPath,
+                                                extension,
+                                            });
+                                        } else
+                                            image = workbook.addImage({
+                                                filename: FileUploadConfig.getUrl() + '/' + a.localPath,
+                                                extension,
+                                            });
+                                        const baseDownLoadUrl = FileUploadConfig.getDownUrl();
                                         if (res.length === 1) {
                                             worksheet.addImage(image, {
                                                 tl: {col: colIndex, row: rowIndex},
-                                                ext: {width: 120, height: 120}
+                                                ext: {width: 120, height: 120},
+                                                hyperlinks: {
+                                                    hyperlink: baseDownLoadUrl + '/' + a.id,
+                                                    tooltip: '点击下载原图'
+                                                }
                                             });
                                         }
                                         if (res.length > 1) {
-                                            const step = 1 / (res.length + 1)
+                                            const step = 1 / (res.length)
+                                            // row.height = res.length*120>row.height?res.length*120:row.height
+
                                             worksheet.addImage(image, {
-                                                tl: {col: colIndex + index * 1.05 * step, row: rowIndex + 1},
-                                                br: {col: colIndex + (index + 1) * step, row: rowIndex + 2},
-                                                ext: {width: 120, height: 120}
+                                                tl: {col: colIndex + index, row: rowIndex + 1.1},
+                                                // br: {col: colIndex + 1 , row: rowIndex + 1.33 + 0.33*index},
+                                                ext: {width: 240, height: 240},
+                                                hyperlinks: {
+                                                    hyperlink: baseDownLoadUrl + '/' + a.id,
+                                                    tooltip: '点击下载原图'
+                                                }
                                             });
                                         }
 
@@ -181,6 +234,8 @@ export class XlsxService {
         })
         await Promise.all(promiseD).then(() => {
             console.log('end ')
+        }).catch(e => {
+            console.log(e)
         })
         //数据填装完毕 生成excel
         if (!fs.existsSync(FileUploadConfig.getUrl() + '/xlsx')) {

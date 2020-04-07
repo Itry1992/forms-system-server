@@ -15,6 +15,7 @@ import LogProcedure from "../../entity/log.procedure.entity";
 import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
 import {pseudoRandomBytes} from "crypto";
 import ProcedureNode from "../../entity/procedure.node.entity";
+import {Sequelize} from "sequelize-typescript";
 
 
 @Injectable()
@@ -25,9 +26,13 @@ export class FormDataService {
 
     async list(pageQueryVo: PageQueryVo, formId: string) {
         return FormData.findAndCountAll({
-            where: {formId, endData: 'end'},
+            where: {formId},
             limit: pageQueryVo.getSize(),
-            offset: pageQueryVo.offset()
+            offset: pageQueryVo.offset(),
+            include: [{
+                model: ProcedureNode,
+                attributes: ['id', 'name']
+            }]
         })
     }
 
@@ -291,7 +296,7 @@ export class FormDataService {
                 }
                 // if (targetNode.)
                 //组装简报
-                const briefData: any = this.briefData(targetNode,formData,form)
+                const briefData: any = this.briefData(targetNode, formData, form)
                 const todoRow = {
                     status: targetNode.clazz === 'receiveTask' ? '2' : '1',
                     targetUserId: targetNode && targetNode.assignPerson,
@@ -322,7 +327,7 @@ export class FormDataService {
                 return node.id === formData.currentProcedureNodeId
             })
 
-            formData.briefData = this.briefData(saveNode,formData,form)
+            formData.briefData = this.briefData(saveNode, formData, form)
 
             //创建日志
             LogProcedure.create(logData)
@@ -475,25 +480,43 @@ export class FormDataService {
         })
     }
 
-    async startDataList(user: User, pageQueryVo: PageQueryVo) {
+
+    async groupByForm(endData: 'start'|'end', user: User) {
+        return FormData.findAll({
+            where: {
+                createUserId: user.id,
+                endData,
+            },
+            include: [{
+                model: Form,
+                attributes: ['name'],
+                required: true
+            }],
+            group: ['formId', Sequelize.col('form.name'),Sequelize.col('form.id')],
+            attributes: ['formId', [Sequelize.fn('COUNT', Sequelize.col('FormData.id')), 'formCount']]
+        })
+    }
+
+    async listByEndData(user: User, pageQueryVo: PageQueryVo, endData: string, formId?: string) {
         //
         return FormData.findAndCountAll({
             where: {
                 createUserId: user.id,
-                endData: 'start'
+                endData,
+                formId
             },
             include: [{
                 model: Form,
                 attributes: ['id', 'name']
             }],
             attributes: {exclude: ['data']},
-            order:[['updatedAt','DESC']],
+            order: [['updatedAt', 'DESC']],
             limit: pageQueryVo.limit(),
             offset: pageQueryVo.offset()
         });
     }
 
-    private briefData (node: ProcedureNode, formData, form : Form) {
+    private briefData(node: ProcedureNode, formData, form: Form) {
         const briefData: any = {}
         if (node.letter && node.letter.length !== 0)
             node.letter.filter((s) => {

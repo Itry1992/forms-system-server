@@ -5,6 +5,7 @@ import moment from "moment";
 import * as uuid from 'node-uuid';
 import {ResponseUtil} from "../../common/response.util";
 import Attachment from "../../entity/attachment.entity";
+import images from "images";
 
 @Injectable()
 export class FileService {
@@ -16,17 +17,29 @@ export class FileService {
         if (!Fs.existsSync(parentFile)) {
             Fs.mkdirSync(parentFile);
         }
-        const  rParentPath = `${moment().format('YYMMDD')}`
+        const rParentPath = `${moment().format('YYMMDD')}`
         // console.log(file);
-        const  rPath = rParentPath +'/' + uuid.v4() + this.getFileprx(file.originalname)
-        const localPath = uploadFile+'/'+ rPath;
+        const rPath = rParentPath + '/' + uuid.v4() + this.getFileprx(file.originalname)
         try {
-            Fs.writeFileSync(localPath, file.buffer);
+            Fs.writeFileSync(uploadFile + '/' + rPath, file.buffer);
         } catch (e) {
             return ResponseUtil.error('创建文件失败')
         }
+        let rThumbPath = ''
+        if (file.mimetype.includes('image/')) {
+            if (!Fs.existsSync(parentFile+'/thumb')) {
+                Fs.mkdirSync(parentFile+'/thumb');
+            }
+            rThumbPath = rParentPath + '/thumb/' + uuid.v1() + this.getFileprx(file.originalname)
+            images(file.buffer).resize(600).save(uploadFile + '/' + rThumbPath, {               //Save the image to a file, with the quality of 50
+                quality: 80                    //保存图片到文件,图片质量为50
+            })
+        }
+
+
         return Attachment.create({
-            localPath:rPath,
+            localPath: rPath,
+            thumbPath: rThumbPath,
             size: file.size,
             fileType: file.mimetype,
             originalName: file.originalname,

@@ -21,13 +21,15 @@ import User from "../../entity/User.entity";
 import {Op} from "sequelize";
 import {ArrayUtil} from "../../common/util/array.util";
 import FormTodo from "../../entity/form.todo.entity";
+import {FormDataService} from "../service/form.data.service";
 
 @Controller('/form')
 @ApiTags('form')
 export class FormController {
     constructor(private readonly deptService: DeptService,
                 private readonly formService: FormService,
-                private readonly xlsxService: XlsxService) {
+                private readonly xlsxService: XlsxService,
+                private readonly formDataService: FormDataService) {
     }
 
     @Get('/list')
@@ -70,7 +72,7 @@ export class FormController {
             }
         })
         const data = await this.formService.detail(id)
-        return {success:true,data, hasData:!!todo}
+        return {success: true, data, hasData: !!todo}
     }
 
     @Post('/add')
@@ -113,7 +115,7 @@ export class FormController {
     async toSubmit(@Param('id') id: string) {
         //formId
         const form: Form = await Form.findByPk(id)
-        if (!form){
+        if (!form) {
             throw new BadRequestException('对应表单不存在')
         }
 
@@ -143,12 +145,7 @@ export class FormController {
         const form: Form = await Form.findByPk(formId)
         if (!form)
             throw new BadRequestException('no entity form whit  this id ')
-        const data: FormData[] = await FormData.findAll({
-            where: {
-                formId,
-                endData: 'end'
-            }
-        })
+        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000,0),formId)).rows
 
         const path = await this.xlsxService.export(data, form, formExportDto)
         const rs = fs.createReadStream(path)
