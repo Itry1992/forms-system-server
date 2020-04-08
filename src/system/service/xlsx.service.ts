@@ -75,15 +75,18 @@ export class XlsxService {
             headData.push({header: '审核人', key: 'submitUserName', width: 20})
         }
 
-        imageItems.forEach((item: FormItemInterface) => {
+        imageItems.forEach((item: FormItemInterface,index) => {
+            const i = effectItems.length
             effectItems.push(item)
             if (item.type === 'image') {
                 headData.push({header: item.title || '', key: item.id, width: 40})
                 headData.push({header: '', key: item.id + '1', width: 40})
                 headData.push({header: '', key: item.id + '2', width: 40})
-
                 effectItems.push(null)
                 effectItems.push(null)
+                //合并单元格   t, l, b, r numbers, e.g. `10,11,12,13`
+                // worksheet.mergeCells(1,i+1,1,i+3)
+                // worksheet.getCell(1,i+1).value= '3123123'
             }
             if (item.type === 'signName')
                 headData.push({header: item.title || '', key: item.id, width: 40})
@@ -246,6 +249,13 @@ export class XlsxService {
 
         //测试版本
         await workbook.xlsx.writeFile(filePath)
+        //添加文件记录
+        Attachment.create({
+            fileType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            localPath:'/xlsx/'+r + '.xlxs',
+            // size:workbook.xlsx.
+            description:form.name+new Date().toLocaleString() +'导出文件'
+        })
         return filePath
 
     }
@@ -276,6 +286,7 @@ export class XlsxService {
         const r = uuid.v1();
         const filePath = FileUploadConfig.getUrl + '/xlsx/' + r + '.xlsx'
         await workbook.xlsx.writeFile(filePath)
+
         return filePath
 
     }

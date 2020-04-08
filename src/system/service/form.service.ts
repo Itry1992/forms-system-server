@@ -48,20 +48,21 @@ export class FormService {
             }
         })
         const ps = []
-
+        //todo 不应该删除流程
         if (todo) {
-            //删除流程  代办事项  流程附表
+            //删除代办事项
             ps.push(FormTodo.destroy({where: {formId: id}}))
-            ps.push(Procedure.destroy({where:{formId:id}}).then(()=>{
-               return  Promise.all([
-                    ProcedureNode.destroy({where:{
-                            procedureId:null
-                        }}),
-                    ProcedureNode.destroy({where:{
-                            procedureId:null
-                        }}),
-                ])
-            }))
+            // ps.push(Procedure.destroy({where:{formId:id}}).then(()=>{
+            //    return  Promise.all([
+            //         ProcedureNode.destroy({where:{
+            //                 procedureId:null
+            //             }}),
+            //         ProcedureNode.destroy({where:{
+            //                 procedureId:null
+            //             }}),
+            //     ])
+            // }))
+            ps.push(Procedure.update({status: '2'}, {where: {formId: id}}))
         }
         ps.push(Form.update(form, {
             where: {id}
@@ -84,6 +85,7 @@ export class FormService {
     async toSubmit(form: Form, nodeId?: string) {
         if (form.type === 'flow') {
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
+            //item filter
             if (procedure && procedure.nodes) {
                 const targetNode = procedure.nodes.find((node) => {
                     if (!nodeId)

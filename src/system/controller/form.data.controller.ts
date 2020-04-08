@@ -144,7 +144,6 @@ export class FormDataController {
             return ResponseUtil.error('该表单已经被删除')
         }
 
-        //todo
         const result = await this.formDataService.submit(data, form, req.ip, user)
         return ResponseUtil.success(result)
     }

@@ -32,9 +32,9 @@ export default class FormData extends Model {
     suggest?: string
 
     @Column({
-        type: DataType.TEXT
+        type: DataType.JSONB
     })
-    handWritten?: string
+    handWritten?: { uid: string, url: string, status: string }
 
     @CreatedAt
     createTime: Date
@@ -69,7 +69,7 @@ export default class FormData extends Model {
     dataGroup: string
 
     @Column
-    //改组数据状态 1处理中 2处理完成
+        //改组数据状态 1处理中 2处理完成
     dataGroupStatus: string
 
     @Column

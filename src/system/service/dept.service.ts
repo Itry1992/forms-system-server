@@ -96,21 +96,38 @@ export class DeptService {
 
     }
 
-    async findNext(deptTreeDto: DeptTreeDto) {
-        const children: DeptTreeDto[] = (await Dept.findAll({
+    // async findNextV2(dept : Dept) {
+    //
+    // }
+
+    async findNext(rootId: string): Promise<DeptTreeDto> {
+        const allDept = await Dept.findAll({
             where: {
-                parentId: deptTreeDto.id
+                [Op.or]: {
+                    rootId,
+                    id: rootId
+                }
             }
-        })).map((dept) => {
-            return DeptTreeDto.byDept(dept)
         })
-        deptTreeDto.children = children
-        for (const deptDto of children) {
-            if (deptDto.hasChildren) {
-                await this.findNext(deptDto)
-            }
-        }
-        return deptTreeDto
+        return this.getTreeByData(allDept)
+
+    }
+
+    getTreeByData(depts: Dept[], parent?: DeptTreeDto) {
+        if (!parent)
+            parent = DeptTreeDto.byDept(depts.find((dept, index) => {
+                return dept.parentId === null || dept.parentId === '0'
+            }))
+        parent.children = depts.filter((dept) => {
+            return dept.parentId === parent.id
+        }).map((dept) => {
+            const dto = DeptTreeDto.byDept(dept)
+            this.getTreeByData(depts, dto)
+            return dto
+        })
+
+        return parent
+
     }
 
 
@@ -119,7 +136,10 @@ export class DeptService {
         const rows = []
 
         for (const dept of data.rows) {
-            const row = await this.findNext(DeptTreeDto.byDept(dept))
+            // let rootId = dept.rootId
+            // if (!dept.rootId || dept.rootId==='0')
+            //     rootId = dept.id
+            const row = await this.findNext(dept.id)
             rows.push(row)
         }
         // console.log('rows', rows)
@@ -171,6 +191,20 @@ export class DeptService {
                     return res
                 })
             })
+        })
+    }
+
+    async getIds(rootId) {
+        const allDept: Dept[] = await Dept.findAll({
+            where: {
+                [Op.or]: {
+                    rootId,
+                    id: rootId
+                }
+            }
+        })
+        return allDept.map((dept) =>{
+            return dept.id
         })
     }
 }

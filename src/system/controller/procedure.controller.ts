@@ -7,6 +7,7 @@ import ProcedureNode from "../../entity/procedure.node.entity";
 import FormData from "../../entity/form.data.entity";
 import FormTodo from "../../entity/form.todo.entity";
 import {ArrayUtil} from "../../common/util/array.util";
+import Form from "../../entity/form.entity";
 
 @Controller('/procedure')
 @ApiTags('流程以及流程节点')
@@ -18,7 +19,6 @@ export class ProcedureController {
     @ApiOperation({description: '支持 node and edge 同时传递'})
     async update(@Body() procedure: Procedure, @Param('formId') formId: string) {
         //检验是否有表单数据
-
 
         procedure.formId = formId
         if (!procedure.nodes || !procedure.edges) {
@@ -36,11 +36,34 @@ export class ProcedureController {
                     if (ArrayUtil.isNull(node.assignPerson) && ArrayUtil.isNull(node.assignDept)) {
                         throw new BadRequestException(`${node.label} 没有审批人`)
                     }
-                if (node.clazz==='end') {
-                    node.assignDept= []
+                if (node.clazz === 'end') {
+                    node.assignDept = []
                     node.assignPerson = []
                     if (!node.letter)
                         node.letter = []
+                }
+            })
+        }
+        if (procedure.edges) {
+            const form: Form = await Form.findByPk(formId)
+            const itemIds = form.items.map((i) => {
+                return i.id
+            })
+            procedure.edges.forEach((e) => {
+                if (e.flow.conditiontype === 'custom') {
+                    e.flow.conditions.forEach((c) => {
+                        //验证流转条件中的items有效性
+                        if (!itemIds.includes(c.itemId)) {
+                            const source = procedure.nodes.find((n) => {
+                                return n.id === e.source
+                            })
+                            const target = procedure.nodes.find((n) => {
+                                return n.id === e.target
+                            })
+                            throw new BadRequestException('请重新设计' + source.label + ' 到 ' + target.label + '的流转条件')
+                        }
+
+                    })
                 }
             })
         }
@@ -52,9 +75,11 @@ export class ProcedureController {
         })
         if (todo) {
             //删除todo数据
-            FormTodo.destroy({where:{
+            FormTodo.destroy({
+                where: {
                     formId,
-                }})
+                }
+            })
             // throw new BadRequestException('此表单已有数据，无法修改流程')
         }
 

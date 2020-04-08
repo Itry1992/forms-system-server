@@ -22,7 +22,7 @@ export default class Procedure  extends  Model{
     id: string
 
     @Column
-    status: string
+    status: '1'|'2'
     @Column
     name: string
     @Column({

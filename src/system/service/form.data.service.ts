@@ -64,6 +64,9 @@ export class FormDataService {
             //流程表单
             logData.formId = form.id
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
+            if (procedure.status === '2') {
+                throw  new BadRequestException('流程已被禁用')
+            }
             if (!dataDto.todoId) {
                 //第一次提交 进入流程发起节点
                 formData.dataGroup = uuid.v1()
@@ -481,7 +484,7 @@ export class FormDataService {
     }
 
 
-    async groupByForm(endData: 'start'|'end', user: User) {
+    async groupByForm(endData: 'start' | 'end', user: User) {
         return FormData.findAll({
             where: {
                 createUserId: user.id,
@@ -492,7 +495,7 @@ export class FormDataService {
                 attributes: ['name'],
                 required: true
             }],
-            group: ['formId', Sequelize.col('form.name'),Sequelize.col('form.id')],
+            group: ['formId', Sequelize.col('form.name'), Sequelize.col('form.id')],
             attributes: ['formId', [Sequelize.fn('COUNT', Sequelize.col('FormData.id')), 'formCount']]
         })
     }

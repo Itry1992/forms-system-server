@@ -27,6 +27,7 @@ export class ProcedureService {
         else
             delete procedure.id
         // console.log(procedure.id)
+        procedure.status = '1'
         return Procedure.sequelize.transaction(t => {
             return Procedure.upsert(procedure, {returning: true}).then((res) => {
                 return Promise.all([

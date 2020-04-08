@@ -56,8 +56,11 @@ export class FormController {
         }
         if (deptId) {
             const dept = await Dept.findByPk(deptId)
-            const data = await this.deptService.findNext(DeptTreeDto.byDept(dept))
-            this.getIds(data, deptIds)
+            let rootId = dept.rootId
+            if (dept.rootId || dept.rootId==='0') {
+                rootId = dept.id
+            }
+            deptIds = await this.deptService.getIds(rootId)
         }
 
         const res = await this.formService.list(pageQueryVo, name, deptIds)
@@ -131,14 +134,7 @@ export class FormController {
         return ResponseUtil.success()
     }
 
-    private getIds(data: DeptTreeDto, ids: string[]) {
-        ids.push(data.id)
-        if (data.children) {
-            data.children.forEach(d => {
-                this.getIds(d, ids)
-            })
-        }
-    }
+
 
     @Post('/excelExport/:formId')
     async export(@Param('formId') formId: string, @Body() formExportDto: FormExportDto, @Res() res: Response) {

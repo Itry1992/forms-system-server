@@ -1,5 +1,4 @@
 import {Body, Controller, Get, Param, Post, Query, Res, UploadedFile, UseInterceptors} from "@nestjs/common";
-import * as Fs from "fs";
 import {Response} from 'express';
 import {FileService} from "../service/file.service";
 import {ApiConsumes, ApiOperation, ApiTags} from "@nestjs/swagger";
@@ -32,8 +31,8 @@ export class FileController {
     @Post('/addBase64Url')
     async addBase64Url(@Body() d: Base64UploadDto) {
         const basePath = FileUploadConfig.getUrl()
-        if (!Fs.existsSync(basePath + '/handSign')) {
-            Fs.mkdirSync(basePath + '/handSign');
+        if (!fs.existsSync(basePath + '/handSign')) {
+            fs.mkdirSync(basePath + '/handSign');
         }
         const r = uuid.v1()
         const filePath = basePath + '/handSign/' + r + '.jpg'
@@ -68,7 +67,7 @@ export class FileController {
         if (!path.startsWith(FileUploadConfig.getUrl())) {
             path = FileUploadConfig.getUrl() + '/' + entity.localPath
         }
-        const rs = Fs.createReadStream(path)
+        const rs = fs.createReadStream(path)
         rs.on('data', chunk => {
             res.write(chunk, 'binary')
         })
@@ -103,11 +102,30 @@ export class FileController {
         description: 'ids 使用‘,’ 分割'
     })
     async delete(@Query('ids') ids: string) {
-        return ResponseUtil.success(await Attachment.destroy({
+        const attachments: Attachment[] = await Attachment.findAll({
             where: {
                 id: {[Op.in]: ids.split(',')}
             }
-        }))
+        })
+        const basePath = FileUploadConfig.getUrl()
+
+        try {
+            attachments.forEach((attachment) => {
+                fs.unlinkSync(basePath + '/' + attachment.localPath)
+                if (attachment.thumbPath) {
+                    fs.unlinkSync(basePath + '/' + attachment.thumbPath)
+                }
+            })
+        } catch (e) {
+            console.log(e)
+        }
+        Attachment.destroy({
+            where: {
+                id: {[Op.in]: ids.split(',')}
+            }
+        })
+        //
+        return ResponseUtil.success()
     }
 
 }

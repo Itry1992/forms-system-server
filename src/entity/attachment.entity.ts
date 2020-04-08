@@ -1,12 +1,12 @@
 import {Column, CreatedAt, Model, Table} from 'sequelize-typescript';
-import {UUIDV4} from 'sequelize';
+import {UUIDV1, UUIDV4} from 'sequelize';
 @Table({
     underscored:true,
     timestamps:true
 })
 export  default class Attachment extends Model {
     @Column({
-        defaultValue:UUIDV4,
+        defaultValue:UUIDV1,
         primaryKey:true
     })
     id: string;

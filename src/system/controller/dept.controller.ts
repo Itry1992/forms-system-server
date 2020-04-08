@@ -61,14 +61,18 @@ export class DeptController {
     }
 
     @Get('/treeByUser')
-    @ApiOperation({description: '返回指定用户所在的部门和其 children, 如果未指定则为当前token负载中的user'})
+    @ApiOperation({description: '返回指定用户所在的顶级部门和其 children, 如果未指定则为当前token负载中的user'})
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     async treeByUser(@Query('userId')userId: string, @Req() req) {
         if (!userId)
             userId = req.user.id
+
         const dept = await this.deptService.findByUserId(userId)
-        const tree = this.deptService.findNext(DeptTreeDto.byDept(dept))
+        let rootId = dept.rootId
+        if (!dept.rootId || dept.rootId==='0')
+            rootId = dept.id
+        const tree = this.deptService.findNext(rootId)
         return ResponseUtil.success(tree)
     }
 
@@ -91,7 +95,10 @@ export class DeptController {
         //
         if (!root)
             throw new BadRequestException('no root')
-        const tree = await this.deptService.findNext(DeptTreeDto.byDept(root))
+        let rootId = dept.rootId
+        if (!dept.rootId || dept.rootId==='0')
+            rootId = dept.id
+        const tree = await this.deptService.findNext(rootId)
         // return ResponseUtil.success(tree)
         return {success: true, data: [tree]}
     }
