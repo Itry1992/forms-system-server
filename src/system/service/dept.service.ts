@@ -71,6 +71,12 @@ export class DeptService {
         if (req.user.sysRoleId !== '1' && dept.parentId === '0') {
             throw  new BadRequestException('only systemAdmin can delete this dept node')
         }
+        const hasChild = Dept.count({where:{parentId : id}})
+        if (hasChild>0)
+            throw new BadRequestException('该部门有子部门,无法删除')
+        const  hasUser = DeptUsersEntity.count({where:{deptId:id}})
+        if (hasUser)
+            throw new BadRequestException('该部门用户,无法删除')
         if (dept)
             return Dept.destroy({
                 where: {
@@ -95,11 +101,6 @@ export class DeptService {
             });
 
     }
-
-    // async findNextV2(dept : Dept) {
-    //
-    // }
-
     async findNext(rootId: string): Promise<DeptTreeDto> {
         const allDept = await Dept.findAll({
             where: {
@@ -110,18 +111,21 @@ export class DeptService {
             }
         })
         return this.getTreeByData(allDept)
-
     }
 
-    getTreeByData(depts: Dept[], parent?: DeptTreeDto) {
+    getTreeByData(depts: Dept[], parent?: any) {
         if (!parent)
             parent = DeptTreeDto.byDept(depts.find((dept, index) => {
                 return dept.parentId === null || dept.parentId === '0'
             }))
+        parent.value = parent.id
+        parent.title = parent.name
         parent.children = depts.filter((dept) => {
             return dept.parentId === parent.id
         }).map((dept) => {
-            const dto = DeptTreeDto.byDept(dept)
+            const dto : any = dept.get({plain:true})
+            dto.value = dto.id
+            dto.title = dto.name
             this.getTreeByData(depts, dto)
             return dto
         })

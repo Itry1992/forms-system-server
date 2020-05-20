@@ -10,7 +10,6 @@ import {FileUploadConfig} from "../../common/file.upload.config";
 import * as fs from "fs";
 import * as uuid from 'node-uuid';
 import {Base64UploadDto} from "../dto/base64.upload.dto";
-import moment from "moment";
 
 
 @Controller('/file')

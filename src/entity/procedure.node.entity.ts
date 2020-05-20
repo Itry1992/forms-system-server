@@ -5,12 +5,6 @@ import ProcedureEdge from "./procedure.edge.entity";
 import {UUIDV1} from "sequelize";
 import {ApiHideProperty} from "@nestjs/swagger";
 
-interface i {
-    id: string,
-    visible: boolean
-    edit: boolean
-}
-
 @Table({
     timestamps: true,
     underscored: true,
@@ -54,7 +48,15 @@ export default class ProcedureNode extends Model {
         type: DataType.ARRAY(DataType.STRING)
     })
     assignDept?: string[]; //审批部门 id
+    @Column({
+        type: DataType.ARRAY(DataType.STRING)
+    })
+    assignRole?: string[] //审批角色id
 
+    @Column({type: DataType.JSONB})
+    dynamic: { submitter: boolean, submitterDeptRoles: string[] }
+    @Column({type: DataType.JSONB})
+    onlyExtra: { sign: boolean }
     @Column({
         type: DataType.ARRAY(DataType.STRING)
     })
@@ -87,6 +89,9 @@ export default class ProcedureNode extends Model {
 
     @HasMany(() => ProcedureEdge)
     nextEdge: ProcedureEdge[]
+
+    @ApiHideProperty()
+    selectMode: {name: string, id: string ,type:'dept'|'user'|'role'|'dynamicUser'|'dynamicRole'}[]
 
 
 }

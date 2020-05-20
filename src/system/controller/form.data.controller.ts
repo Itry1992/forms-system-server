@@ -20,6 +20,7 @@ import {JwtAuthGuard} from "../../auth/auth.guard";
 import Form from "../../entity/form.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import {Op, where} from "sequelize";
+import {FormDataQueryDto} from "../dto/form.data.query.dto";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -30,15 +31,16 @@ export class FormDataController {
                 private readonly formService: FormService) {
     }
 
-    @Get('/list/:formId')
+    @Post('/list/:formId')
     @ApiOperation({description: '返回全部的数据'})
-    async list(@Query(PageVoPipe) pageQueryVo: PageQueryVo, @Param('formId')formId: string) {
+    async list( @Param('formId')formId: string, @Body() formDataQueryDto: FormDataQueryDto,@Body(PageVoPipe) pageQueryVo: PageQueryVo) {
         const form: Form = await Form.findByPk(formId)
         if (!form)
             throw new BadRequestException('no form whit this id')
-        const data = await this.formDataService.list(pageQueryVo, formId)
+        const data = await this.formDataService.list(pageQueryVo, formId,formDataQueryDto)
         const res: any = ResponseUtil.page(data)
         res.items = form.items
+        res.qrCode = form.qrCode
         return res
     }
 
@@ -46,7 +48,7 @@ export class FormDataController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({description: '表单数据'})
-    async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo,@Query('formId') formId: string) {
+    async finishedByUser(@Req() req, @Query(PageVoPipe) pageQueryVo: PageQueryVo, @Query('formId') formId: string) {
         // debugger
         const user: User = req.user
         const page = await FormData.findAndCountAll({
@@ -68,7 +70,7 @@ export class FormDataController {
     }
 
     @Get('/finishedByUser/detail/:id')
-    @ApiOperation({description: '表单数据'})
+    @ApiOperation({description: '表单数据 我发起的/我完成的查看详情'})
     async finishedByUserDetail(@Param('id') id: string) {
         const formData: FormData = await FormData.findByPk(id, {
             include: [{
@@ -78,8 +80,9 @@ export class FormDataController {
         if (!formData) {
             throw new BadRequestException('no formData whit id ' + id)
         }
-        //filter itmes
+        //filter items
         const form = formData.form
+        //根据data过滤
         const items = formData.form.items.filter((i) => {
             return !!formData.data[i.id]
         }).map((i) => {
@@ -143,6 +146,8 @@ export class FormDataController {
         if (!form) {
             return ResponseUtil.error('该表单已经被删除')
         }
+        if ((form.publicUrl==='0'||!form.publicUrl) && !user)
+            throw new BadRequestException('该表单已需要登陆')
 
         const result = await this.formDataService.submit(data, form, req.ip, user)
         return ResponseUtil.success(result)
@@ -240,7 +245,10 @@ export class FormDataController {
         return ResponseUtil.success(data)
     }
 
-
+    @Get('cancel/:id')
+    async cancel(@Param('id') id: string) {
+        return ResponseUtil.success(await this.formDataService.cancel(id))
+    }
 }
 
 

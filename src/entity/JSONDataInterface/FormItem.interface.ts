@@ -21,6 +21,8 @@ export class FormItemInterface {
     noRepeat?: boolean;
     /**必填 */
     required?: boolean;
+    //唯一值
+    unique?: boolean
     /**扫码输入 */
     scan?: ScanInterface;
     ank?: boolean;

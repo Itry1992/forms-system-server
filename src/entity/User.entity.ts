@@ -11,7 +11,7 @@ import {
 } from 'sequelize-typescript';
 
 import {UUIDV4} from 'sequelize';
-import {ApiHideProperty} from "@nestjs/swagger";
+import {ApiHideProperty, ApiProperty} from "@nestjs/swagger";
 import Role from "./Role.entity";
 import RoleUser from "./role.user.entity";
 import Dept from "./Dept.entity";
@@ -20,9 +20,7 @@ import SysRole from "./sys.role.entity";
 
 
 @Table({
-    // tableName:'newuser',
     timestamps: true,
-    // freezeTableName:true,
     underscored: true,
 })
 
@@ -45,11 +43,10 @@ export default class User extends Model {
     @Column
     eMail: string
     @Column
-
     weChartId: string
 
     @Column({
-        defaultValue:'0'
+        defaultValue: '0'
     })
     status: string
 
@@ -61,6 +58,9 @@ export default class User extends Model {
     @BelongsToMany(() => Dept, () => DeptUsersEntity)
     depts: Dept[]
 
+    @Column({type: DataType.JSONB})
+    registerData: any
+
     @ForeignKey(() => SysRole)
     sysRoleId: string
     @ApiHideProperty()
@@ -69,5 +69,7 @@ export default class User extends Model {
 
     @Column
     rootDeptId: string
+    @Column
+    signTime: Date
 
 }

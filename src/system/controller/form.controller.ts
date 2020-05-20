@@ -1,5 +1,17 @@
-import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards} from "@nestjs/common";
-import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Query,
+    Req,
+    Res, UploadedFile,
+    UseGuards,
+    UseInterceptors
+} from "@nestjs/common";
+import {ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import {DeptService} from "../service/dept.service";
@@ -22,6 +34,9 @@ import {Op} from "sequelize";
 import {ArrayUtil} from "../../common/util/array.util";
 import FormTodo from "../../entity/form.todo.entity";
 import {FormDataService} from "../service/form.data.service";
+import {userInfo} from "os";
+import Role from "../../entity/Role.entity";
+import {FileInterceptor} from "@nestjs/platform-express";
 
 @Controller('/form')
 @ApiTags('form')
@@ -57,13 +72,13 @@ export class FormController {
         if (deptId) {
             const dept = await Dept.findByPk(deptId)
             let rootId = dept.rootId
-            if (dept.rootId || dept.rootId==='0') {
+            if (dept.rootId || dept.rootId === '0') {
                 rootId = dept.id
             }
             deptIds = await this.deptService.getIds(rootId)
         }
 
-        const res = await this.formService.list(pageQueryVo, name, deptIds)
+        const res = await this.formService.list(pageQueryVo, name, deptIds, req.user?.roles)
         return ResponseUtil.page(res)
     }
 
@@ -135,13 +150,12 @@ export class FormController {
     }
 
 
-
     @Post('/excelExport/:formId')
     async export(@Param('formId') formId: string, @Body() formExportDto: FormExportDto, @Res() res: Response) {
         const form: Form = await Form.findByPk(formId)
         if (!form)
             throw new BadRequestException('no entity form whit  this id ')
-        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000,0),formId)).rows
+        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000, 0), formId, formExportDto.formDataQueryDto)).rows
 
         const path = await this.xlsxService.export(data, form, formExportDto)
         const rs = fs.createReadStream(path)
@@ -154,6 +168,29 @@ export class FormController {
         })
     }
 
+    @Post('/excelExportTemplate/:formId')
+    async excelExportTemplate(@Param('formId')formId: string,@Res() res: Response) {
+        const path = await this.xlsxService.exportTemplate(formId)
+        const rs = fs.createReadStream(path)
+        rs.on('data', chunk => {
+            res.write(chunk, 'binary')
+        })
+        rs.on('end', () => {
+            fs.unlinkSync(path)
+            res.end()
+        })
+    }
+
+    @Post('/importFormExcel/:formId')
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(FileInterceptor('file'))
+    async addFile(@UploadedFile() file: any,@Param('formId') formId: string) {
+        if (file)
+            return this.xlsxService.importDataByExportTemplate(file.buffer,formId)
+        else return ResponseUtil.error('no file')
+    }
+
+
     @Post('/updateWriteAble/:formId')
     @ApiOperation({description: '维护 可以填写改表单的用户'})
     async updateUseAbleUser(@Body() formWriteableDto: FormWriteableDto, @Param('formId') formId: string) {
@@ -161,6 +198,8 @@ export class FormController {
             formWriteableDto.users = []
         if (!formWriteableDto.depts)
             formWriteableDto.depts = []
+        if (!formWriteableDto.roles)
+            formWriteableDto.roles = []
         if (!formWriteableDto.publicUrl)
             formWriteableDto.publicUrl = '0'
         const res = await this.formService.updateWriteAble(formWriteableDto, formId)
@@ -170,7 +209,7 @@ export class FormController {
 
     @Get('/getWriteAble/:formId')
     async getWriteAble(@Param('formId') formId: string) {
-        const writeableData: Form = await Form.findByPk(formId, {attributes: ['writeAbleUserId', 'writeAbleDeptId', 'publicUrl']})
+        const writeableData: Form = await Form.findByPk(formId, {attributes: ['writeAbleUserId', 'writeAbleDeptId', 'writeAbleRoleId', 'publicUrl']})
         if (!writeableData)
             throw new BadRequestException('no form with id ' + formId)
         const writeableDto: any = {}
@@ -183,7 +222,7 @@ export class FormController {
                     }
                 }).then(res => {
                     writeableDto.users = res.map((u) => {
-                        return {id: u.id, name: u.name}
+                        return {id: u.id, name: u.name, title: u.name, key: u.id}
                     })
                 })
             )
@@ -195,7 +234,19 @@ export class FormController {
                     }
                 }).then(res => {
                     writeableDto.depts = res.map((u) => {
-                        return {id: u.id, name: u.name}
+                        return {id: u.id, name: u.name, title: u.name, key: u.id}
+                    })
+                })
+            )
+        }
+        if (writeableData.writeAbleRoleId && writeableData.writeAbleRoleId.length !== 0) {
+            ps.push(Role.findAll({
+                    where: {
+                        id: {[Op.in]: writeableData.writeAbleRoleId}
+                    }
+                }).then(res => {
+                    writeableDto.roles = res.map((u) => {
+                        return {id: u.id, name: u.name, title: u.name, key: u.id}
                     })
                 })
             )

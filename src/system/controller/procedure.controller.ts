@@ -32,10 +32,30 @@ export class ProcedureController {
                     if (!node.letter || node.letter.length === 0) {
                         throw  new BadRequestException(`${node.label} 没有可见/可编辑字段`)
                     }
-                if (node.clazz === 'userTask' || node.clazz === 'receiveTask')
-                    if (ArrayUtil.isNull(node.assignPerson) && ArrayUtil.isNull(node.assignDept)) {
-                        throw new BadRequestException(`${node.label} 没有审批人`)
-                    }
+                if (node.clazz === 'userTask' || node.clazz === 'receiveTask') {
+                    // //selectMode
+                    // node.assignDept = []
+                    // node.assignPerson  = []
+                    if (ArrayUtil.isNull(node.selectMode))
+                        throw new BadRequestException(node.label + ' 没有负责人')
+                    node.assignRole = []
+                    node.assignPerson = []
+                    node.assignDept = []
+                    node.dynamic = {submitter: null, submitterDeptRoles: []}
+                    node.selectMode.forEach((it) => {
+                        if (it.type === 'role')
+                            node.assignRole ? node.assignRole.push(it.id) : node.assignRole = [it.id]
+                        if (it.type === 'dept')
+                            node.assignDept.push(it.id)
+                        if (it.type === 'user')
+                            node.assignPerson ? node.assignPerson.push(it.id) : node.assignPerson = [it.id]
+                        if (it.type === 'dynamicUser')
+                            node.dynamic.submitter = true
+                        if (it.type === 'dynamicRole')
+                            node.dynamic.submitterDeptRoles.push(it.id)
+                    })
+                    delete node.selectMode
+                }
                 if (node.clazz === 'end') {
                     node.assignDept = []
                     node.assignPerson = []

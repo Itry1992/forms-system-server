@@ -29,10 +29,11 @@ export class FormTodoController {
             return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, null, 'receiveTask', false, formId))
         if (status === '4')
             // return ResponseUtil.page(await this.formTodoService.createByUser(req.user, pageQueryVo))
-            return ResponseUtil.page(await this.formDataService.listByEndData(req.user, pageQueryVo,'start',formId))
-        if (status==='6')
-            return ResponseUtil.page(await this.formDataService.listByEndData(req.user,pageQueryVo,'end',formId))
-        return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, status, 'userTask', false, formId))
+            return ResponseUtil.page(await this.formDataService.listByEndData(req.user, pageQueryVo, 'start', formId))
+        if (status === '6')
+            return ResponseUtil.page(await this.formDataService.listByEndData(req.user, pageQueryVo, 'end', formId))
+        if (status === '1')
+            return ResponseUtil.page(await this.formTodoService.findByUser(req.user, pageQueryVo, status, 'userTask', false, formId))
     }
 
     @Get('/list/dealSelf')

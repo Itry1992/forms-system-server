@@ -2,18 +2,16 @@ import {
     Table,
     Column,
     Model,
-    HasMany,
     PrimaryKey,
-    Default,
     BelongsToMany,
     DataType,
-    ForeignKey, BelongsTo
 } from 'sequelize-typescript';
 
 import {UUIDV4} from 'sequelize';
-import {ApiHideProperty} from "@nestjs/swagger";
+import {ApiHideProperty, ApiProperty} from "@nestjs/swagger";
 import User from "./User.entity";
 import RoleUser from "./role.user.entity";
+import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
 
 
 @Table({
@@ -30,16 +28,25 @@ export default class Role extends Model {
 
     @Column
     name: string
+    @Column
+    description: string
+    @Column({defaultValue: '0'})
+    parentId: string
+    @Column({defaultValue: '0'})
+    rootId: string
 
+    @Column({defaultValue:false})
+    signAbel: boolean
 
     @Column
-    parentId: string
+    rootDeptId: string
+
+    @Column({type: DataType.JSONB})
+    items: FormItemInterface[]
 
     @ApiHideProperty()
     @BelongsToMany(() => User, () => RoleUser)
     users: User[]
-
-
 
 
 }

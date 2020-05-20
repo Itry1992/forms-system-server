@@ -29,6 +29,18 @@ export default class FormTodo extends Model {
     })
     targetDeptId: string[]
 
+    @Column({
+        type: DataType.ARRAY(DataType.STRING)
+    })
+    targetRoleId: string[]
+
+    @Column({
+        type: DataType.ARRAY(DataType.STRING)
+    })
+    targetDeptIdWhitRole: string[]
+
+    @Column({defaultValue:false})
+    onlySigned: boolean
     @Column
     dealUserId: string
 
@@ -76,6 +88,4 @@ export default class FormTodo extends Model {
         //1 未处理 2已处理 3已经到达end节点
     status: '1' | '2' | '3'
 
-    // @CreatedAt
-    // createdAt : Date
 }

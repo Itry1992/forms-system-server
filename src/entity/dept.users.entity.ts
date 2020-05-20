@@ -1,4 +1,4 @@
-import {Column, ForeignKey, Model, PrimaryKey, Table} from "sequelize-typescript";
+import {Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table} from "sequelize-typescript";
 import {UUIDV4} from "sequelize";
 import Dept from "./Dept.entity";
 import User from "./User.entity";
@@ -16,4 +16,8 @@ export default class DeptUsersEntity  extends Model{
 
     @ForeignKey(()=>User)
     userId: string
+
+    // // @HasMany(()=>Role)
+    // @Column({type:DataType.ARRAY(DataType.STRING)})
+    // roleIds: string[]
 }

@@ -29,7 +29,7 @@ async function bootstrap() {
     if (isProduction)
         await app.listen(3003)
     else
-        await app.listen(3001);
+        await app.listen(3002);
 }
 
 bootstrap();

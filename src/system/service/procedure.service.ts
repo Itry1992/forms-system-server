@@ -4,6 +4,12 @@ import ProcedureNode from "../../entity/procedure.node.entity";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
 import {ifError} from "assert";
 import {ResponseUtil} from "../../common/response.util";
+import {Producer} from "@nestjs/common/interfaces/external/kafka-options.interface";
+import Dept from "../../entity/Dept.entity";
+import {Op} from "sequelize";
+import Role from "../../entity/Role.entity";
+import User from "../../entity/User.entity";
+import {ArrayUtil} from "../../common/util/array.util";
 
 @Injectable()
 export class ProcedureService {
@@ -68,7 +74,7 @@ export class ProcedureService {
     }
 
     async detailByFormId(id: string) {
-        return Procedure.findOne({
+        let p: any = await Procedure.findOne({
             where: {
                 formId: id,
                 // status: '2'
@@ -79,6 +85,61 @@ export class ProcedureService {
                 model: ProcedureEdge
             }]
         })
+        if (p) {
+            p = p.get({plain: true})
+            const ids = p.nodes.reduce((per, c) => {
+                if (ArrayUtil.isNotNull(c.assignDept))
+                    per.depts = per.depts.concat(c.assignDept)
+                if (ArrayUtil.isNotNull(c.assignPerson))
+                    per.users = per.users.concat(c.assignPerson)
+                if (ArrayUtil.isNotNull(c.assignRole))
+                    per.roles = per.roles.concat(c.assignRole)
+                if (ArrayUtil.isNotNull(c.dynamic?.submitterDeptRoles))
+                    per.roles = per.roles.concat(c.dynamic.submitterDeptRoles)
+                return per
+            }, {roles: [], depts: [], users: []})
+
+            await Promise.all([
+                Dept.findAll({where: {id: {[Op.in]: ids.depts}}}),
+                Role.findAll({where: {id: {[Op.in]: ids.roles}}}),
+                User.findAll({where: {id: {[Op.in]: ids.users}}, include: [{model: Dept}]},),
+            ]).then((res) => {
+                p.nodes.forEach((n) => {
+                    n.selectMode = []
+                    if (n.dynamic?.submitter)
+                        n.selectMode.push({id: '-1', name: '表单发起人', type: 'dynamicUser'})
+                    if (ArrayUtil.isNotNull(n.assignDept)) {
+                        n.assignDept.forEach((s) => {
+                            const dept: Dept = res[0]?.find((d) => d.id === s)
+                            if (dept)
+                                n.selectMode.push({id: s, name: dept.name, type: 'dept'})
+                        })
+                    }
+                    if (ArrayUtil.isNotNull(n.assignRole)) {
+                        n.assignRole.forEach((s) => {
+                            const find = res[1]?.find((d) => d.id === s)
+                            if (find)
+                                n.selectMode.push({id: s, name: find.name, type: 'role'})
+                        })
+                    }
+                    if (ArrayUtil.isNotNull(n.assignPerson)) {
+                        n.assignPerson.forEach((s) => {
+                            const find: User = res[2]?.find((d) => d.id === s)
+                            if (find)
+                                n.selectMode.push({id: s, name: find.name, type: 'user', deptId: find.depts[0]?.id})
+                        })
+                    }
+                    if (ArrayUtil.isNotNull(n.dynamic?.submitterDeptRoles)) {
+                        n.dynamic?.submitterDeptRoles.forEach((s) => {
+                            const find = res[1]?.find((d) => d.id === s)
+                            if (find)
+                                n.selectMode.push({id: s, name: find.name, type: 'dynamicRole'})
+                        })
+                    }
+                })
+            })
+        }
+        return p
     }
 
     async createNode(procedureNode: ProcedureNode) {

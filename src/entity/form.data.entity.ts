@@ -49,7 +49,12 @@ export default class FormData extends Model {
     createUserName: string
 
     @Column
+    createUserDeptId: string
+
+
+    @Column
     submitUserId: string
+
 
     @Column
     submitUserName: string
@@ -73,7 +78,7 @@ export default class FormData extends Model {
     dataGroupStatus: string
 
     @Column
-    endData: 'start' | 'end' | 'task'
+    endData: 'start' | 'end' | 'task' | 'import'
 
     @Column({
         type: DataType.JSONB

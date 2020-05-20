@@ -4,6 +4,7 @@ import {JwtService} from '@nestjs/jwt';
 import User from "../entity/User.entity";
 import Dept from "../entity/Dept.entity";
 import SysRole from "../entity/sys.role.entity";
+import Role from "../entity/Role.entity";
 
 
 @Injectable()
@@ -24,6 +25,8 @@ export class AuthService {
             },{
                 model:SysRole,
                 attributes:['id','name']
+            },{
+                model: Role
             }]
         });
         if (user) {

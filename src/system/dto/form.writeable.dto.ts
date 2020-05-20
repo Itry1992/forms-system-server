@@ -6,4 +6,6 @@ export class FormWriteableDto {
     @ApiHideProperty()
     depts: { id: string, name: string }[]
     publicUrl?: string
+    @ApiHideProperty()
+    roles: { id: string, name: string }[]
 }

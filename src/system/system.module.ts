@@ -23,14 +23,17 @@ import {AuthModule} from "../auth/auth.module";
 import {FormLogController} from "./controller/form.log.controller";
 import {FormCommentController} from "./controller/form.comment.controller";
 import {XlsxService} from "./service/xlsx.service";
+import {RoleController} from "./controller/role.controller";
+import {RoleService} from "./service/role.service";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
-        ProcedureController, FileController,FormTodoController,FormDataController,FormLogController,FormCommentController],
+        ProcedureController, FileController, FormTodoController, FormDataController, FormLogController, FormCommentController,
+        RoleController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
-        FileService,FormTodoService,FormDataService,XlsxService]
-    ,imports:[AuthModule]
+        FileService, FormTodoService, FormDataService, XlsxService, RoleService]
+    , imports: [AuthModule]
 })
 export class SystemModule {
 }

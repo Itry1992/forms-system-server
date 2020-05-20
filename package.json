@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "ts:debug": "ts-node --project tsconfig.json -r tsconfig-paths/register src/main.ts -w"
+    "ts:debug": "ts-node-dev --project tsconfig.json -r tsconfig-paths/register src/main.ts"
   },
   "dependencies": {
     "@nestjs/common": "^6.10.14",
@@ -62,6 +62,7 @@
     "ts-jest": "25.2.0",
     "ts-loader": "^6.2.1",
     "ts-node": "^8.6.0",
+    "ts-node-dev": "^1.0.0-pre.44",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.8.3"
   },

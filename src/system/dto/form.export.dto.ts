@@ -1,4 +1,5 @@
 import {ApiOperation, ApiProperty} from "@nestjs/swagger";
+import {FormDataQueryDto} from "./form.data.query.dto";
 
 export class FormExportDto {
     @ApiProperty()
@@ -14,6 +15,8 @@ export class FormExportDto {
     // groupStatus?:boolean
     currentProcedureNode?: boolean
     dataGroupStatus: string
+
+    formDataQueryDto: FormDataQueryDto
 
 
 }

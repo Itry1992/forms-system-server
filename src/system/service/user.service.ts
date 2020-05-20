@@ -1,11 +1,15 @@
 import {BadRequestException, Injectable} from "@nestjs/common";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import User from "../../entity/User.entity";
-import {Op} from "sequelize";
+import {Includeable, Op} from "sequelize";
 import {ResponseUtil} from "../../common/response.util";
 import SysRole from "../../entity/sys.role.entity";
 import DeptUsersEntity from "../../entity/dept.users.entity";
 import {ArrayUtil} from "../../common/util/array.util";
+import {RegisterDto} from "../dto/register.dto";
+import Dept from "../../entity/Dept.entity";
+import RoleUser from "../../entity/role.user.entity";
+import Role from "../../entity/Role.entity";
 
 @Injectable()
 export class UserService {
@@ -14,16 +18,22 @@ export class UserService {
         const whereOpt: any = {}
         if (name)
             whereOpt.name = {[Op.like]: `%${name}%`}
-        const include = []
+        const include: Includeable[] = []
         include.push({
             model: SysRole
         })
         if (deptId) {
             include.push({
                 association: 'depts',
+                required: true,
                 where: {id: deptId}
             })
+        }else {
+            include.push({
+                association: 'depts'
+            })
         }
+        include.push({model: Role})
         return User.findAndCountAll({
             where: whereOpt,
             limit: pageVo.getSize(),
@@ -66,10 +76,6 @@ export class UserService {
                 })
             })
         })
-    }
-
-    async deleteAssociation(userId: string, deptId?: string) {
-        // return
     }
 
     async updateAssociation(userId: string, newDeptId: string, rootDeptId: string) {
@@ -123,5 +129,28 @@ export class UserService {
                 return res
             })
         })
+    }
+
+    async register(registerDto: RegisterDto, deptId: string) {
+        const dept: Dept = await Dept.findByPk(deptId)
+        return User.sequelize.transaction(t => {
+            return User.create({
+                rootDeptId: dept.rootId === '0' ? dept.id : dept.rootId,
+                account: registerDto.account,
+                pwd: registerDto.pwd,
+                name: registerDto.name,
+                registerData: registerDto.registerData
+            }).then((res) => {
+                const ps = []
+                if (registerDto.roleId) {
+                    ps.push(RoleUser.create({userId: res.id, roleId: registerDto.roleId}))
+                }
+                return Promise.all([
+                    ...ps,
+                    DeptUsersEntity.create({userId: res.id, deptId: deptId})
+                ])
+            })
+        })
+
     }
 }

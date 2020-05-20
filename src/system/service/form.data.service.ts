@@ -10,12 +10,13 @@ import {FormTodoService} from "./form.todo.service";
 import FormTodo from "../../entity/form.todo.entity";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
 import User from "../../entity/User.entity";
-import {where} from "sequelize";
+import {Op, where} from "sequelize";
 import LogProcedure from "../../entity/log.procedure.entity";
 import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
-import {pseudoRandomBytes} from "crypto";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import {Sequelize} from "sequelize-typescript";
+import {FormDataQueryDto} from "../dto/form.data.query.dto";
+import {ArrayUtil} from "../../common/util/array.util";
 
 
 @Injectable()
@@ -24,7 +25,22 @@ export class FormDataService {
                 private readonly formTodoService: FormTodoService) {
     }
 
-    async list(pageQueryVo: PageQueryVo, formId: string) {
+    async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto) {
+        const whereOptions: any = {}
+        if (dto.nodeId) {
+            if (dto.nodeId === 'start')
+                whereOptions.endData = 'start'
+            else if (dto.nodeId === 'end')
+                whereOptions.endData = 'end'
+            else
+                whereOptions.currentProcedureNodeId = dto.nodeId
+        }
+        if (ArrayUtil.isNotNull(dto.fliedQuery)) {
+            const dataWhere: any = {}
+            dto.fliedQuery.forEach((q) => {
+                dataWhere[q.itemId] = this.toQueryOpt(q.method, q.value)
+            })
+        }
         return FormData.findAndCountAll({
             where: {formId},
             limit: pageQueryVo.getSize(),
@@ -32,7 +48,8 @@ export class FormDataService {
             include: [{
                 model: ProcedureNode,
                 attributes: ['id', 'name']
-            }]
+            }],
+            order: ['createTime']
         })
     }
 
@@ -51,9 +68,8 @@ export class FormDataService {
     // async find
 
     async submit(dataDto: FormDataSubmitDto, form: Form, ip?: string, user?: User) {
-        //第一次提交时候 自动赋予start
-        //获取表单
-
+        // unique verify
+        await this.verifyUnique(form, dataDto.data, form.type === 'flow')
         const formData: any = {}
         formData.formId = form.id
         formData.data = dataDto.data
@@ -64,7 +80,7 @@ export class FormDataService {
             //流程表单
             logData.formId = form.id
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
-            if (procedure.status === '2') {
+            if (procedure?.status === '2') {
                 throw  new BadRequestException('流程已被禁用')
             }
             if (!dataDto.todoId) {
@@ -79,11 +95,9 @@ export class FormDataService {
                 }
                 //======填装初始数据====
                 formData.crateIp = ip
-                if (user) {
-                    formData.createUserId = user.id
-                    formData.createUserName = user.name
-                }
-
+                formData.createUserId = user?.id
+                formData.createUserDeptId = user?.depts[0]?.id
+                formData.createUserName = user?.name || '未登录'
                 formData.currentProcedureNodeId = startNode.id
                 formData.endData = 'start'
                 logData.action = startNode.name
@@ -111,7 +125,7 @@ export class FormDataService {
                     LogProcedure.create(logData)
                     throw new BadRequestException('对应流转条件已经删除')
                 }
-                const oldData = await FormData.findOne({
+                const oldData: FormData = await FormData.findOne({
                     where: {
                         formId: todo.formId,
                         dataGroup: todo.formDataGroup
@@ -125,6 +139,7 @@ export class FormDataService {
                     formData.createTime = oldData.createTime
                     formData.createUserId = oldData.createUserId
                     formData.createUserName = oldData.createUserName
+                    formData.createUserDeptId = oldData.createUserDeptId
                     // formData.dataGroup  = oldData.dataGroup
                 }
                 if (dataDto.suggest)
@@ -170,7 +185,7 @@ export class FormDataService {
     async endFlow(formId: string, dataGroup: string, nodeId: string, user: User, data: FormData, receiveTaskTodo?) {
         const p = []
 
-        p.push(FormTodo.update({status: '2', dealUserId: user.id}, {
+        p.push(FormTodo.update({status: '2'}, {
             where: {
                 formId: formId || data.formId, formDataGroup: dataGroup || data.dataGroup
             }
@@ -229,8 +244,8 @@ export class FormDataService {
         } else {
             throw new BadRequestException('无法退回，请检查是否是初始节点')
         }
-        return undefined;
     }
+
 
     private async flowWork(procedure: Procedure, formData, dataDto, logData, form: Form, user) {
         //校验流转规则 确定接下来的节点 并且生成对下一个节点流转人的代办事项
@@ -285,7 +300,7 @@ export class FormDataService {
             const receiveTaskTodo = []
             let endFlow = false
             for (const targetEdge of passEdge) {
-                const targetNode = procedure.nodes.find((node) => {
+                const targetNode: ProcedureNode = procedure.nodes.find((node) => {
                     return node.id === targetEdge.target
                 })
                 if (targetNode.clazz === 'end') {
@@ -300,15 +315,19 @@ export class FormDataService {
                 // if (targetNode.)
                 //组装简报
                 const briefData: any = this.briefData(targetNode, formData, form)
+                //代办事项
                 const todoRow = {
                     status: targetNode.clazz === 'receiveTask' ? '2' : '1',
-                    targetUserId: targetNode && targetNode.assignPerson,
+                    targetUserId: this.getTodoTargetUser(targetNode, formData),
                     targetDeptId: targetNode && targetNode.assignDept,
+                    targetRoleId: targetNode && targetNode.assignRole,
+                    targetDeptIdWhitRole: targetNode.dynamic?.submitterDeptRoles?.map((roleID) => formData.createUserDeptId + ":" + roleID),
+                    onlySigned: targetNode.onlyExtra?.sign || false,
                     formId: form.id,
                     formTitle: form.name,
                     formDataGroup: formData.dataGroup,
-                    createUser: user && user.name || '',
-                    createUserId: user && user.id || '',
+                    createUser: formData.createUserName || '',
+                    createUserId: formData.createUserName || '',
                     briefData,
                     nodeName: targetNode.label,
                     type: targetNode.clazz,
@@ -336,7 +355,9 @@ export class FormDataService {
             LogProcedure.create(logData)
             if (endFlow === true || userTaskTodo.length === 0) {
                 //流程结束前处理代办事项
-                // this.formTodoService.bulkCreate(receiveTaskTodo)
+                await FormTodo.update({status: '2', dealUserId: user.id}, {
+                    where: {id: dataDto.todoId}
+                })
                 await this.endFlow(form.id, formData.dataGroup, formData.currentProcedureNodeId, user, formData, receiveTaskTodo)
                 return '流程结束';
             }
@@ -370,6 +391,24 @@ export class FormDataService {
 
     }
 
+    async verifyUnique(form: Form, data: any, flow: boolean) {
+        for (const item of form.items) {
+            if (item.noRepeat && data[item.id]) {
+                const whereOptions: any = {
+                    data: {[item.id]: data[item.id]},
+                    formId: form.id
+                }
+                if (flow)
+                    whereOptions.endData = 'start'
+                const dbData = await FormData.findOne({
+                    where: whereOptions
+                })
+                if (dbData)
+                    throw new BadRequestException(item.title + '不允许重复')
+            }
+        }
+    }
+
     async end(todoId: string, user: User, formDto: FormDataSubmitDto) {
         const formData: any = {}
         const todo: FormTodo = await FormTodo.findByPk(todoId, {
@@ -399,7 +438,9 @@ export class FormDataService {
             formData.crateIp = oldData.crateIp
         }
 
-
+        await FormTodo.update({status: '2', dealUserId: user.id}, {
+            where: {id: todoId}
+        })
         this.endFlow(null, null, null, user, formData)
         return undefined;
     }
@@ -410,6 +451,18 @@ export class FormDataService {
                 todoId
             }
         })
+    }
+
+    private getTodoTargetUser(targetNode: ProcedureNode, formData: FormData) {
+        let targetUserId = targetNode.assignPerson
+        if (targetNode.dynamic) {
+            if (targetNode.dynamic.submitter) {
+                if (!targetUserId)
+                    targetUserId = []
+                targetUserId.push(formData.submitUserId)
+            }
+        }
+        return targetUserId
     }
 
 
@@ -537,4 +590,43 @@ export class FormDataService {
             })
         return briefData
     }
+
+    private toQueryOpt(method, value: any) {
+        switch (method) {
+            case "gt":
+                return {[Op.gt]: value}
+            case "gte":
+                return {[Op.gte]: value}
+            case "eq":
+                return {[Op.eq]: value}
+            case "lt":
+                return {[Op.lt]: value}
+            case "lte":
+                return {[Op.lte]: value}
+            case 'null':
+                return null
+            case 'not null':
+                return {[Op.not]: null}
+        }
+    }
+
+    async cancel(id: string) {
+        const data: FormData = await FormData.findByPk(id, {include: [{model: Form}]})
+        if (!data)
+            throw new BadRequestException('error id ')
+        if (!data.form.cancelAbel)
+            throw new BadRequestException('该表单不允许撤回')
+        // const otherData = await FormData.findOne({where:{formId:data.formId,dataGroup:data.dataGroup,endData:'task'}})
+        // if (otherData)
+        //     throw new BadRequestException('该表单已进入审核 不允许回撤')
+        //删除 该数据 同时删除 代办事项
+        FormData.sequelize.transaction(t => {
+            return Promise.all([
+                FormData.destroy({where: {formId: data.formId, dataGroup: data.dataGroup}}),
+                FormTodo.destroy({where: {formId: data.formId, formDataGroup: data.dataGroup}})
+            ])
+        })
+    }
+
+
 }

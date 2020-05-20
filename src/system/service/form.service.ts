@@ -12,13 +12,15 @@ import {FormWriteableDto} from "../dto/form.writeable.dto";
 import User from "../../entity/User.entity";
 import FormTodo from "../../entity/form.todo.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
+import Role from "../../entity/Role.entity";
+import {analyzeScope} from "@typescript-eslint/parser/dist/analyze-scope";
 
 @Injectable()
 export class FormService {
     constructor(private readonly procedureService: ProcedureService) {
     }
 
-    async list(pageQueryVo: PageQueryVo, name?: string, deptIds?: string[]) {
+    async list(pageQueryVo: PageQueryVo, name: string, deptIds: string[], roles: Role[]) {
         const whereOptions: any = {}
         const include: Includeable[] = []
         if (name)
@@ -139,6 +141,10 @@ export class FormService {
             updateData.writeAbleDeptId = formWriteableDto.depts.map((d) => {
                 return d.id
             })
+        if (formWriteableDto.roles)
+            updateData.writeAbleRoleId = formWriteableDto.roles.map((d) => {
+                return d.id
+            })
         if (formWriteableDto.publicUrl)
             updateData.publicUrl = formWriteableDto.publicUrl
         return Form.update(updateData, {
@@ -154,9 +160,14 @@ export class FormService {
             whereOpt[Op.or] = {
                 writeAbleUserId: {[Op.contains]: [user.id]},
                 writeAbleDeptId: {[Op.contains]: [user.depts[0].id]},
+                // [Op.]
+                writeAbleRoleId: {[Op.overlap]: user.roles.map((r)=>r.id)},
             }
         } else {
-            whereOpt.writeAbleUserId = {[Op.contains]: [user.id]}
+            whereOpt[Op.or] = {
+                writeAbleUserId: {[Op.contains]: [user.id]},
+                writeAbleRoleId: {[Op.overlap]: user.roles.map((r)=>r.id)},
+            }
         }
 
         return Form.findAndCountAll({

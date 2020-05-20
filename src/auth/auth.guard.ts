@@ -11,6 +11,8 @@ import {AuthService} from "./auth.service";
 import User from "../entity/User.entity";
 import SysRole from "../entity/sys.role.entity";
 import Dept from "../entity/Dept.entity";
+import {Reflector} from "@nestjs/core";
+import Role from "../entity/Role.entity";
 
 /**
  * @class JwtAuthGuard
@@ -39,11 +41,13 @@ import Dept from "../entity/Dept.entity";
 // }
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-    constructor(private readonly authService: AuthService) {
+    constructor(private readonly authService: AuthService,
+                private readonly reflector: Reflector) {
 
     }
 
     async canActivate(context: ExecutionContext) {
+        const permission = this.reflector.get<string[]>('permission', context.getHandler());
         const request = context.switchToHttp().getRequest();
         const header = request.header('Authorization')
         if (!header)
@@ -61,7 +65,8 @@ export class JwtAuthGuard implements CanActivate {
             },
             include: [
                 {model: SysRole},
-                {model: Dept}
+                {model: Dept},
+                {model: Role}
             ]
         });
         if (!user) {

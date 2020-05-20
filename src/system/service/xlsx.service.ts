@@ -1,6 +1,5 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, Injectable} from "@nestjs/common";
 import * as fs from "fs";
-// import xlsx from 'node-xlsx';
 import Form from "../../entity/form.entity";
 import FormData from "../../entity/form.data.entity";
 import {FormExportDto} from "../dto/form.export.dto";
@@ -12,8 +11,10 @@ import Excel from 'exceljs';
 import Attachment from "../../entity/attachment.entity";
 import {Op} from "sequelize";
 import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
-import ownKeys = Reflect.ownKeys;
-import {ifError} from "assert";
+import {ResponseUtil} from "../../common/response.util";
+import {find} from "rxjs/operators";
+import {analyzeScope} from "@typescript-eslint/parser/dist/analyze-scope";
+
 
 @Injectable()
 export class XlsxService {
@@ -25,11 +26,6 @@ export class XlsxService {
             itemIds = []
         const effectItems = []
         const imageItems = []
-        // const effectItems = itemIds.map((id) => {
-        //     const items = form.items.find((i) => {
-        //         return i.id === id
-        //     })
-        // })
         itemIds.forEach((id) => {
             const item = form.items.find((i) => {
                 return i.id === id
@@ -75,7 +71,7 @@ export class XlsxService {
             headData.push({header: '审核人', key: 'submitUserName', width: 20})
         }
 
-        imageItems.forEach((item: FormItemInterface,index) => {
+        imageItems.forEach((item: FormItemInterface, index) => {
             const i = effectItems.length
             effectItems.push(item)
             if (item.type === 'image') {
@@ -118,7 +114,7 @@ export class XlsxService {
                     cellData = datas[rowIndex].dataGroupStatus === '1' ? '审核中' : '审核完成'
                 if (col.key === 'submitUserName')
                     cellData = datas[rowIndex].submitUserName
-                    const item: FormItemInterface = effectItems[colIndex]
+                const item: FormItemInterface = effectItems[colIndex]
                 if (!cellData) {
                     return ''
                 }
@@ -251,10 +247,10 @@ export class XlsxService {
         await workbook.xlsx.writeFile(filePath)
         //添加文件记录
         Attachment.create({
-            fileType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            localPath:'/xlsx/'+r + '.xlxs',
+            fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            localPath: '/xlsx/' + r + '.xlxs',
             // size:workbook.xlsx.
-            description:form.name+new Date().toLocaleString() +'导出文件'
+            description: form.name + new Date().toLocaleString() + '导出文件'
         })
         return filePath
 
@@ -289,5 +285,74 @@ export class XlsxService {
 
         return filePath
 
+    }
+
+    async exportTemplate(formId: string) {
+        const form: Form = await Form.findByPk(formId)
+        const workbook = new Excel.Workbook();
+        const worksheet = workbook.addWorksheet('sheet1')
+        const data = form.items.reduce((p, i) => {
+            p[0].push(i.title)
+            p[1].push(i.id)
+            return p
+        }, [[], []])
+        worksheet.addRow(data[0])
+        worksheet.addRow(data[1])
+        //数据填装完毕 生成excel
+        const filePath = await this.filePath()
+        await workbook.xlsx.writeFile(filePath)
+        return filePath
+    }
+
+    async importDataByExportTemplate(data: Buffer, formId: string) {
+        const form = await Form.findByPk(formId)
+        const workbook = new Excel.Workbook();
+        await workbook.xlsx.load(data);
+        const workSheet = workbook.worksheets[0]
+        //head verify
+        const idRow = workSheet.getRow(2)
+        if (!idRow)
+            throw new BadRequestException('格式验证失败')
+        const map = new Map<number, string>()
+        idRow.eachCell((cell, index) => {
+            const found = form.items.find((i) => i.id === cell.value)
+            if (!found)
+                throw new BadRequestException('格式验证失败')
+            map.set(index, cell.value.toString())
+        })
+        const time = Math.ceil((workSheet.rowCount+1) / 1000)
+        for (let i = 0; i < time; i++) {
+            this.import(workSheet, i, form, map)
+        }
+
+
+        return ResponseUtil.success()
+    }
+
+
+    async filePath() {
+        if (!fs.existsSync(FileUploadConfig.getUrl() + '/xlsx')) {
+            await fs.mkdirSync(FileUploadConfig.getUrl() + '/xlsx');
+        }
+        const r = uuid.v1();
+        const filePath = FileUploadConfig.getUrl() + '/xlsx/' + r + '.xlsx'
+        return filePath
+    }
+
+    async import(workSheet, index, form, map) {
+        const datas = []
+        for (let i = Math.max(3, index * 1000); i < Math.min((index + 1) * 1000, workSheet.rowCount+1); i++) {
+            const row = workSheet.getRow(i)
+            const data: any = {}
+            data.formId = form.id
+            data.endData = 'import'
+            data.dataGroupStatus = '2'
+            data.data = {}
+            row.eachCell((cell, index) => {
+                data.data[map.get(index)] = cell.value
+            })
+            datas.push(data)
+        }
+        FormData.bulkCreate(datas)
     }
 }

@@ -7,6 +7,7 @@ import {PageQueryVo} from "../../common/pageQuery.vo";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
 import FormData from "../../entity/form.data.entity";
 import Form from "../../entity/form.entity";
+import {TimeUtil} from "../../common/util/time.util";
 
 @Injectable()
 export class FormTodoService {
@@ -19,7 +20,7 @@ export class FormTodoService {
     }
 
     async findByUserAndFormData(user: User, formId: string, dataGroup: string) {
-        const userOpt = this.getUserOpt(user)
+        const userOpt = this.getOrOpts(user)
         return FormTodo.findOne({
             where: {
                 formId,
@@ -34,7 +35,9 @@ export class FormTodoService {
     }
 
     async findByUser(user: User, pageQueryVo: PageQueryVo, status: string, type: string, currentUserDeal?: boolean, formId?: string) {
-        const userOpt = this.getUserOpt(user)
+        // if (user.signTime.valueOf()>)
+        const signed = TimeUtil.signed(user.signTime)
+        const orOpts = this.getOrOpts(user)
         const statusOpt: any = {}
         if (status === '1')
             statusOpt.status = '1'
@@ -48,10 +51,14 @@ export class FormTodoService {
         if (formId) {
             statusOpt.formId = formId
         }
+        if (!signed) {
+            //如果没签到 只能查看不需要签到 代办事项
+            statusOpt.onlySigned = false
+        }
         return FormTodo.findAndCountAll({
             where: {
                 type: type,
-                ...userOpt,
+                [Op.or]:orOpts,
                 ...statusOpt
             },
             limit: pageQueryVo.getSize(),
@@ -60,18 +67,16 @@ export class FormTodoService {
         })
     }
 
-    private getUserOpt(user: User) {
-        const userOpt: any = {}
+    private getOrOpts(user: User) {
+        const ors: any = {}
+        ors.targetUserId = {[Op.contains]: [user.id]}
         if (user.depts && user.depts.length !== 0) {
-            userOpt[Op.or] = {
-                targetUserId: {[Op.contains]: [user.id]},
-                targetDeptId: {[Op.contains]: [user.depts[0].id]},
-            }
-        } else {
-            userOpt.targetUserId = {[Op.contains]: [user.id]}
+            ors.targetDeptId = {[Op.contains]: [user.depts[0].id]}
+            ors.targetDeptIdWhitRole = {[Op.overlap]: user.roles.map((r) => user.depts[0].id + ':' + r.id)}
         }
+        ors.targetRoleId = {[Op.overlap]: user.roles.map((r) => r.id)}
 
-        return userOpt
+        return ors
     }
 
     findByPK(todoId: string) {
@@ -138,7 +143,13 @@ export class FormTodoService {
     }
 
     async groupByForm(user: User, status: string, type: string, dealByUser: boolean) {
+
+        const signed = TimeUtil.signed(user.signTime)
         const statusOpt: any = {}
+        if (!signed) {
+            //如果没签到 只能查看不需要签到 代办事项
+            statusOpt.onlySigned = false
+        }
         if (status === '1')
             statusOpt.status = '1'
         if (status === '2') {
@@ -148,14 +159,13 @@ export class FormTodoService {
             statusOpt.status = '2'
             statusOpt.dealUserId = user.id
         }
-        const userOpt = this.getUserOpt(user)
+        const orOpts = this.getOrOpts(user)
         return FormTodo.findAll({
             attributes: ['formId', [Sequelize.fn('COUNT', Sequelize.col('FormTodo.id')), 'formCount']],
             include: [{model: Form, attributes: ['id', 'name'], required: true}],
             group: [Sequelize.col('form_id'), Sequelize.col('form.id'), Sequelize.col('form.name'),],
             where: {
-                // status: '1',
-                ...userOpt,
+                [Op.or]:orOpts,
                 ...statusOpt,
                 type
             },

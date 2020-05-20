@@ -93,6 +93,11 @@ export default class Form extends Model {
     })
     writeAbleUserId: string[]
 
+    @Column({
+        type: DataType.ARRAY(DataType.STRING)
+    })
+    writeAbleRoleId: string[]
+
 
     @Column({
         type: DataType.ARRAY(DataType.STRING)
@@ -107,5 +112,10 @@ export default class Form extends Model {
 
     @Column
     password: string
+
+    @Column
+    qrCode: boolean
+    @Column
+    cancelAbel: boolean
 
 }
