@@ -5,6 +5,7 @@ import User from "../entity/User.entity";
 import Dept from "../entity/Dept.entity";
 import SysRole from "../entity/sys.role.entity";
 import Role from "../entity/Role.entity";
+import {Promise} from "sequelize/types/lib/promise";
 
 
 @Injectable()
@@ -46,5 +47,22 @@ export class AuthService {
 
     async verify(payload: string) {
         return await this.jwtService.verifyAsync(payload);
+    }
+
+    async getUserByHeader(req): Promise<User | null>{
+        const header = req.header('Authorization')
+        if (header) {
+            // 提取当前登陆人员
+            const {account, pwd} = await this.verify(header.substring(7))
+            // console.log(account,pwd)
+            return  User.findOne({
+                where: {
+                    account,
+                    pwd
+                }, include: [{
+                    model: Dept
+                }]
+            })
+        }
     }
 }

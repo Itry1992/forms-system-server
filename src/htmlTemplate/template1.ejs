@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+<% if (data.length > 0) { %>
+    <% data.forEach((d)=>{ %>
+        <div style="height: 170px">
+        <span style="min-width:200px;height: 150px;float: left;">
+            <h3 style="line-height: 40px;margin: 0;"><%= d.title %></h3>
+            <p style="line-height: 20px;margin: 0;">资产名称：<span><%= d.title %></span></p>
+            <p style="line-height: 20px;margin: 0;">规格编号：<span><%= d.title %></span></p>
+            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>
+            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>
+            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>
+        </span>
+            <span style="width:155px;height: 155px;float: left; background: cyan">
+            <img style="width: 150px; height: 150px; margin:5px;" src=<%= d.qrCode %>/>
+        </span>
+        </div>
+
+    <% }) %>
+<% } %>
+
+</body>
+</html>

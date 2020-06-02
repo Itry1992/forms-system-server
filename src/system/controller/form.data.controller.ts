@@ -9,18 +9,16 @@ import FormData from "../../entity/form.data.entity";
 import {AuthService} from "../../auth/auth.service";
 import User from "../../entity/User.entity";
 import Dept from "../../entity/Dept.entity";
-import {async} from "rxjs/internal/scheduler/async";
 import {FormTodoService} from "../service/form.todo.service";
-import {ProcedureService} from "../service/procedure.service";
 import FormTodo from "../../entity/form.todo.entity";
 import {FormService} from "../service/form.service";
-import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
 import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import Form from "../../entity/form.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import {Op, where} from "sequelize";
 import {FormDataQueryDto} from "../dto/form.data.query.dto";
+import Role from "../../entity/Role.entity";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -33,11 +31,15 @@ export class FormDataController {
 
     @Post('/list/:formId')
     @ApiOperation({description: '返回全部的数据'})
-    async list( @Param('formId')formId: string, @Body() formDataQueryDto: FormDataQueryDto,@Body(PageVoPipe) pageQueryVo: PageQueryVo) {
+    async list(@Param('formId')formId: string, @Body() formDataQueryDto: FormDataQueryDto, @Body(PageVoPipe) pageQueryVo: PageQueryVo) {
+        // if (formDataQueryDto.status==='checkList')
+        if (formDataQueryDto.checkList === true) {
+            return this.checkList(formId, formDataQueryDto, pageQueryVo)
+        }
         const form: Form = await Form.findByPk(formId)
         if (!form)
             throw new BadRequestException('no form whit this id')
-        const data = await this.formDataService.list(pageQueryVo, formId,formDataQueryDto)
+        const data = await this.formDataService.list(pageQueryVo, formId, formDataQueryDto)
         const res: any = ResponseUtil.page(data)
         res.items = form.items
         res.qrCode = form.qrCode
@@ -112,6 +114,11 @@ export class FormDataController {
         return ResponseUtil.success()
     }
 
+    @Post('/toUpdate/:formDataId')
+    async toUpdate(@Param('formDataId') formDataId: string, @Body() data) {
+        return ResponseUtil.success(await this.formDataService.toUpdate(formDataId))
+    }
+
     @Post('/submit/:formId')
     @ApiOperation({
         description: '提交的数据会进入流程处理 审批流程时候请包含todoId  data字段示例 ： {\n' +
@@ -127,27 +134,14 @@ export class FormDataController {
             '}'
     })
     async submit(@Body() data: FormDataSubmitDto, @Param('formId') formId: string, @Req() req: Request) {
-        const header = req.header('Authorization')
-        let user = undefined
-        if (header) {
-            // 提取当前登陆人员
-            const {account, pwd} = await this.authService.verify(header.substring(7))
-            // console.log(account,pwd)
-            user = await User.findOne({
-                where: {
-                    account,
-                    pwd
-                }, include: [{
-                    model: Dept
-                }]
-            })
-        }
+
         const form = await Form.findByPk(formId)
         if (!form) {
             return ResponseUtil.error('该表单已经被删除')
         }
-        if ((form.publicUrl==='0'||!form.publicUrl) && !user)
-            throw new BadRequestException('该表单已需要登陆')
+        const user = await this.authService.getUserByHeader(req)
+        if ((form.publicUrl && form.publicUrl !== '0') && !user?.id)
+            throw new BadRequestException('jwt expired')
 
         const result = await this.formDataService.submit(data, form, req.ip, user)
         return ResponseUtil.success(result)
@@ -249,6 +243,38 @@ export class FormDataController {
     async cancel(@Param('id') id: string) {
         return ResponseUtil.success(await this.formDataService.cancel(id))
     }
+
+    @Get('/delete/:id')
+    async delete(@Param('id')id: string) {
+        return ResponseUtil.success(await this.formDataService.delete(id))
+    }
+
+    @Get('check/:id')
+    @UseGuards(JwtAuthGuard)
+    async check(@Param('id') id: string, @Req() req) {
+        if (!req.user.roles.find((r: Role) => {
+            return r.checkAbel
+        }))
+            throw new BadRequestException('该角色不可盘点')
+        await this.formDataService.check(req.user, id)
+        return ResponseUtil.success()
+    }
+
+    @Post('/checkList/:formId')
+    async checkList(@Param('formId') formId: string, @Body() formDataQueryDto: FormDataQueryDto, @Body(PageVoPipe) pageQueryVo: PageQueryVo) {
+        const form: Form = await Form.findByPk(formId)
+        if (!form)
+            throw new BadRequestException('no form whit this id')
+        const data = await this.formDataService.checkList(formId, pageQueryVo, formDataQueryDto)
+        const res: any = ResponseUtil.page(data)
+        res.items = form.items
+        res.items.unshift({title: '盘点人', type: 'singText', id: 'checkUserName'})
+        res.items.unshift({title: '盘点时间', type: 'singText', id: 'checkTime'})
+        res.qrCode = form.qrCode
+        return res
+    }
+
+
 }
 
 

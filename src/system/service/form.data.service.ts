@@ -10,13 +10,16 @@ import {FormTodoService} from "./form.todo.service";
 import FormTodo from "../../entity/form.todo.entity";
 import ProcedureEdge from "../../entity/procedure.edge.entity";
 import User from "../../entity/User.entity";
-import {Op, where} from "sequelize";
+import {and, Op, where} from "sequelize";
 import LogProcedure from "../../entity/log.procedure.entity";
 import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import {Sequelize} from "sequelize-typescript";
 import {FormDataQueryDto} from "../dto/form.data.query.dto";
 import {ArrayUtil} from "../../common/util/array.util";
+import FormDataAttach from "../../entity/form.data.attach.entity";
+import moment from "moment";
+import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
 
 
 @Injectable()
@@ -27,22 +30,28 @@ export class FormDataService {
 
     async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto) {
         const whereOptions: any = {}
-        if (dto.nodeId) {
-            if (dto.nodeId === 'start')
+        if (dto?.nodeId) {
+            if (dto?.nodeId === 'start')
                 whereOptions.endData = 'start'
-            else if (dto.nodeId === 'end')
+            else if (dto?.nodeId === 'end')
                 whereOptions.endData = 'end'
             else
-                whereOptions.currentProcedureNodeId = dto.nodeId
+                whereOptions.currentProcedureNodeId = dto?.nodeId
         }
-        if (ArrayUtil.isNotNull(dto.fliedQuery)) {
+        if (dto?.status)
+            whereOptions.endData = dto?.status
+        const ands = []
+        if (ArrayUtil.isNotNull(dto?.fliedQuery)) {
             const dataWhere: any = {}
             dto.fliedQuery.forEach((q) => {
-                dataWhere[q.itemId] = this.toQueryOpt(q.method, q.value)
+                if (q.method && q.value) {
+                    dataWhere[q.id] = this.toQueryOpt(q.method, q.value, dto.status)
+                }
             })
+            whereOptions.data = dataWhere
         }
         return FormData.findAndCountAll({
-            where: {formId},
+            where: {formId, ...whereOptions, [Op.and]: ands},
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset(),
             include: [{
@@ -59,9 +68,28 @@ export class FormDataService {
         return FormData.create({data, formId, submitIp: ip, endData: true})
     }
 
+
+    async toUpdate(id: string) {
+        const formData: FormData = await FormData.findByPk(id, {include: [{model: Form}]})
+        if (!formData)
+            throw new BadRequestException('error id')
+        if (formData?.form.type === 'flow') {
+            throw new BadRequestException('流程表单不可更新')
+        }
+        return {from: formData.form}
+    }
+
     async update(data: any, id: string) {
+        //流程表单不可更新
+        const formData: FormData = await FormData.findByPk(id, {include: [{model: Form}]})
+        if (!formData)
+            throw new BadRequestException('error id')
+        if (formData?.form.type === 'flow') {
+            throw new BadRequestException('流程表单不可更新')
+        }
+        await this.verifyUnique(formData.form, data, false, formData.id)
         return FormData.update({data}, {
-            where: {id}
+            where: {id},
         })
     }
 
@@ -391,22 +419,29 @@ export class FormDataService {
 
     }
 
-    async verifyUnique(form: Form, data: any, flow: boolean) {
-        for (const item of form.items) {
-            if (item.noRepeat && data[item.id]) {
-                const whereOptions: any = {
-                    data: {[item.id]: data[item.id]},
-                    formId: form.id
-                }
-                if (flow)
-                    whereOptions.endData = 'start'
-                const dbData = await FormData.findOne({
-                    where: whereOptions
-                })
-                if (dbData)
-                    throw new BadRequestException(item.title + '不允许重复')
+    async verifyUnique(form: Form, data: any, flow: boolean, formDataId?: string) {
+        const res = form.items.reduce((r, current) => {
+            if (current.noRepeat === true) {
+                r.ors.push({data: {[current.id]: data[current.id]}})
+                r.items.push(current)
+            }
+            return r
+        }, {ors: [], items: []})
+        const whereOptions: any = {}
+        if (flow) {
+            whereOptions.endData = 'start'
+        }
+        if (formDataId)
+            whereOptions.id = {[Op.ne]: formDataId}
+        if (res.items.length !== 0) {
+            const dbData = await FormData.findOne({
+                where: {formId: form.id, ...whereOptions, [Op.or]: res.ors}
+            })
+            if (dbData) {
+                throw new BadRequestException(res.items.map((i: FormItemInterface) => i.title).join(',') + '不允许重复')
             }
         }
+
     }
 
     async end(todoId: string, user: User, formDto: FormDataSubmitDto) {
@@ -591,7 +626,9 @@ export class FormDataService {
         return briefData
     }
 
-    private toQueryOpt(method, value: any) {
+    private toQueryOpt(method, value: any, status: string) {
+        if (Array.isArray(value))
+            value = value.join(',')
         switch (method) {
             case "gt":
                 return {[Op.gt]: value}
@@ -604,9 +641,11 @@ export class FormDataService {
             case "lte":
                 return {[Op.lte]: value}
             case 'null':
-                return null
-            case 'not null':
+                return {[Op.is]: null}
+            case 'notNull':
                 return {[Op.not]: null}
+            // case 'overlap':
+            //     return {[Op.overlap]: value}
         }
     }
 
@@ -629,4 +668,60 @@ export class FormDataService {
     }
 
 
+    async delete(id: string) {
+        return FormData.destroy({where: {id, endData: {[Op.in]: ['import', 'end']}}});
+    }
+
+    async check(user: User, formDataId: string) {
+        const find = await FormDataAttach.findOne({
+            where: {
+                formDataId,
+                createdAt: {[Op.gt]: moment().subtract('12', 'h')}
+            }
+        })
+        if (find)
+            throw new BadRequestException('一天内被盘点过')
+        return FormDataAttach.create({formDataId, userId: user.id, checkUserName: user.name})
+    }
+
+    async checkList(formId: string, pageQueryVo: PageQueryVo, dto: FormDataQueryDto) {
+        const formDataWhere: any = {}
+        if (dto.nodeId) {
+            if (dto.nodeId === 'start')
+                formDataWhere.endData = 'start'
+            else if (dto.nodeId === 'end')
+                formDataWhere.endData = 'end'
+            else
+                formDataWhere.currentProcedureNodeId = dto.nodeId
+        }
+        if (dto.status)
+            formDataWhere.endData = dto.status
+
+        if (ArrayUtil.isNotNull(dto.fliedQuery)) {
+            const dataWhere: any = {}
+            dto.fliedQuery.forEach((q) => {
+                if (q.method && q.value) {
+                    dataWhere[q.id] = this.toQueryOpt(q.method, q.value, dto.status)
+                }
+            })
+            formDataWhere.data = dataWhere
+        }
+        formDataWhere.formId = formId
+        const page: { rows: FormDataAttach[]; count: number } = await FormDataAttach.findAndCountAll({
+            ...pageQueryVo.toSequelizeOpt(),
+            include: [{
+                model: FormData,
+                where: formDataWhere,
+                required: true
+            }]
+        })
+        const data = page.rows
+        page.rows = data.map((attach) => {
+            const formData = (attach.get({plain: true}) as any).formData
+            formData.data.checkUserName = attach.checkUserName
+            formData.data.checkTime = attach.createdAt.toLocaleString()
+            return formData
+        })
+        return page
+    }
 }

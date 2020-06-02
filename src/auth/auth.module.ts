@@ -16,7 +16,7 @@ import SysRole from "../entity/sys.role.entity";
         JwtModule.register({
                 secret: jwtConstants.secret,
                 signOptions: {
-                    expiresIn: '12h'
+                    expiresIn: '30d'
                 }
             }
         ),

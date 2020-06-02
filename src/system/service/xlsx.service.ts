@@ -12,8 +12,6 @@ import Attachment from "../../entity/attachment.entity";
 import {Op} from "sequelize";
 import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
 import {ResponseUtil} from "../../common/response.util";
-import {find} from "rxjs/operators";
-import {analyzeScope} from "@typescript-eslint/parser/dist/analyze-scope";
 
 
 @Injectable()
@@ -40,10 +38,13 @@ export class XlsxService {
 
         // effectItems.push(imageItems)
 
+
         const headData = effectItems.map((item: FormItemInterface, index) => {
             const title = item.title
             return {header: title || '', key: item.id, width: 20}
         })
+        if (form.qrCode)
+            headData.unshift({header: '二维码', key: 'qrCode', width: 40})
         if (formExportDto.createTime) {
             effectItems.push(null)
             headData.push({header: '创建时间', key: 'createTime', width: 20})
@@ -150,7 +151,6 @@ export class XlsxService {
                                         let extension: 'jpeg' | 'png' | 'gif' = 'jpeg'
                                         switch (type) {
                                             case 'jpg' || 'JPG':
-
                                                 break;
                                             case 'gif' || 'GIF':
                                                 extension = 'gif'
@@ -313,14 +313,14 @@ export class XlsxService {
         const idRow = workSheet.getRow(2)
         if (!idRow)
             throw new BadRequestException('格式验证失败')
-        const map = new Map<number, string>()
+        const map = new Map<number, FormItemInterface>()
         idRow.eachCell((cell, index) => {
             const found = form.items.find((i) => i.id === cell.value)
             if (!found)
                 throw new BadRequestException('格式验证失败')
-            map.set(index, cell.value.toString())
+            map.set(index, found)
         })
-        const time = Math.ceil((workSheet.rowCount+1) / 1000)
+        const time = Math.ceil((workSheet.rowCount + 1) / 1000)
         for (let i = 0; i < time; i++) {
             this.import(workSheet, i, form, map)
         }
@@ -339,9 +339,9 @@ export class XlsxService {
         return filePath
     }
 
-    async import(workSheet, index, form, map) {
+    async import(workSheet, index, form, map: Map<number, FormItemInterface>) {
         const datas = []
-        for (let i = Math.max(3, index * 1000); i < Math.min((index + 1) * 1000, workSheet.rowCount+1); i++) {
+        for (let i = Math.max(3, index * 1000); i < Math.min((index + 1) * 1000, workSheet.rowCount + 1); i++) {
             const row = workSheet.getRow(i)
             const data: any = {}
             data.formId = form.id
@@ -349,7 +349,11 @@ export class XlsxService {
             data.dataGroupStatus = '2'
             data.data = {}
             row.eachCell((cell, index) => {
-                data.data[map.get(index)] = cell.value
+                const item = map.get(index)
+                if (item.type === 'select' || item.type === 'radios')
+                    data.data[item.id] = (cell.value as string).split(',')
+                else
+                    data.data[item.id] = cell.value
             })
             datas.push(data)
         }

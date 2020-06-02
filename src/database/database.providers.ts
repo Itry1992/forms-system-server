@@ -8,6 +8,7 @@ import Form from "../entity/form.entity";
 import ProcedureNode from "../entity/procedure.node.entity";
 import FormData from "../entity/form.data.entity";
 import FormTodo from "../entity/form.todo.entity";
+import FormDataAttach from "../entity/form.data.attach.entity";
 
 
 export const databaseProviders = {
@@ -15,8 +16,8 @@ export const databaseProviders = {
     useFactory: async () => {
         const namespace = cls.createNamespace('my-sequelize-namespace');
         Sequelize.useCLS(namespace)
-        const isProduction = process.env.NODE_ENV === 'production';
-        const sequelize = new Sequelize(databaseConfig.production);
+        const isProduction = process.env.NODE_ENV === 'pro';
+        const sequelize = new Sequelize(isProduction?databaseConfig.production:databaseConfig.development);
 
         sequelize.addModels([path.resolve(__dirname, '..') + '/**/*.entity{.ts,.js}']);
         sequelize.authenticate().then(() => {
@@ -26,13 +27,8 @@ export const databaseProviders = {
 
                 console.error('数据库连接失败:', err)
             });
-        // await sequelize.sync();
-        // await User.sync({alter:true})
-        // await Role.sync({alter:true})
-        // await Form.sync({alter:true})
-        // await ProcedureNode.sync({alter:true})
-        // await FormData.sync({alter:true})
-        // await FormTodo.sync({alter:true})
+        // await sequelize.sync({force:true});
+        // FormDataAttach.sync({alter:true})
         return sequelize;
     }
 }

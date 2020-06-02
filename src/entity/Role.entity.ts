@@ -37,6 +37,8 @@ export default class Role extends Model {
 
     @Column({defaultValue:false})
     signAbel: boolean
+    @Column({defaultValue:false})
+    checkAbel: boolean
 
     @Column
     rootDeptId: string

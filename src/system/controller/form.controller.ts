@@ -37,6 +37,8 @@ import {FormDataService} from "../service/form.data.service";
 import {userInfo} from "os";
 import Role from "../../entity/Role.entity";
 import {FileInterceptor} from "@nestjs/platform-express";
+import {ExportPdfDto} from "../dto/export.pdf.dto";
+import {AuthService} from "../../auth/auth.service";
 
 @Controller('/form')
 @ApiTags('form')
@@ -44,7 +46,8 @@ export class FormController {
     constructor(private readonly deptService: DeptService,
                 private readonly formService: FormService,
                 private readonly xlsxService: XlsxService,
-                private readonly formDataService: FormDataService) {
+                private readonly formDataService: FormDataService,
+                private readonly authService: AuthService) {
     }
 
     @Get('/list')
@@ -113,7 +116,6 @@ export class FormController {
     // @ApiOperation
 
     @Post('/update/:formId')
-    // @ApiBearerAuth
     async update(@Body()form: Form, @Param('formId')formId: string) {
         if (ArrayUtil.isNull(form.items)) {
             throw new BadRequestException('items.length = 0')
@@ -130,13 +132,15 @@ export class FormController {
 
     @Get('/toSubmit/:id')
     @ApiOperation({description: '初次提交获取itmes'})
-    async toSubmit(@Param('id') id: string) {
+    async toSubmit(@Param('id') id: string, @Req() req) {
         //formId
         const form: Form = await Form.findByPk(id)
         if (!form) {
             throw new BadRequestException('对应表单不存在')
         }
-
+        const user = await this.authService.getUserByHeader(req)
+        if (form.publicUrl==='0' && !user?.id)
+            throw new BadRequestException('jwt expired')
         const res = await this.formService.toSubmit(form)
         form.items = res.items
         return ResponseUtil.success(form)
@@ -147,47 +151,6 @@ export class FormController {
     async delete(@Param('formId')formId: string) {
         await this.formService.delete(formId)
         return ResponseUtil.success()
-    }
-
-
-    @Post('/excelExport/:formId')
-    async export(@Param('formId') formId: string, @Body() formExportDto: FormExportDto, @Res() res: Response) {
-        const form: Form = await Form.findByPk(formId)
-        if (!form)
-            throw new BadRequestException('no entity form whit  this id ')
-        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000, 0), formId, formExportDto.formDataQueryDto)).rows
-
-        const path = await this.xlsxService.export(data, form, formExportDto)
-        const rs = fs.createReadStream(path)
-        rs.on('data', chunk => {
-            res.write(chunk, 'binary')
-        })
-        rs.on('end', () => {
-            // fs.unlinkSync(path)
-            res.end()
-        })
-    }
-
-    @Post('/excelExportTemplate/:formId')
-    async excelExportTemplate(@Param('formId')formId: string,@Res() res: Response) {
-        const path = await this.xlsxService.exportTemplate(formId)
-        const rs = fs.createReadStream(path)
-        rs.on('data', chunk => {
-            res.write(chunk, 'binary')
-        })
-        rs.on('end', () => {
-            fs.unlinkSync(path)
-            res.end()
-        })
-    }
-
-    @Post('/importFormExcel/:formId')
-    @ApiConsumes('multipart/form-data')
-    @UseInterceptors(FileInterceptor('file'))
-    async addFile(@UploadedFile() file: any,@Param('formId') formId: string) {
-        if (file)
-            return this.xlsxService.importDataByExportTemplate(file.buffer,formId)
-        else return ResponseUtil.error('no file')
     }
 
 
@@ -262,6 +225,63 @@ export class FormController {
     async writeAbleList(@Req() req, @Query('name') name: string, @Query(PageVoPipe) pageQueryVo: PageQueryVo) {
         const data = await this.formService.writeAbleList(req.user, name, pageQueryVo)
         return ResponseUtil.page(data)
+    }
+
+
+    @Post('/excelExport/:formId')
+    async export(@Param('formId') formId: string, @Body() formExportDto: FormExportDto, @Res() res: Response) {
+        const form: Form = await Form.findByPk(formId)
+        if (!form)
+            throw new BadRequestException('no entity form whit  this id ')
+        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000, 0), formId, formExportDto.formDataQueryDto)).rows
+
+        const path = await this.xlsxService.export(data, form, formExportDto)
+        const rs = fs.createReadStream(path)
+        rs.on('data', chunk => {
+            res.write(chunk, 'binary')
+        })
+        rs.on('end', () => {
+            // fs.unlinkSync(path)
+            res.end()
+        })
+    }
+
+    @Post('/excelExportTemplate/:formId')
+    async excelExportTemplate(@Param('formId')formId: string, @Res() res: Response) {
+        const path = await this.xlsxService.exportTemplate(formId)
+        const rs = fs.createReadStream(path)
+        rs.on('data', chunk => {
+            res.write(chunk, 'binary')
+        })
+        rs.on('end', () => {
+            fs.unlinkSync(path)
+            res.end()
+        })
+    }
+
+    @Post('/importFormExcel/:formId')
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(FileInterceptor('file'))
+    async addFile(@UploadedFile() file: any, @Param('formId') formId: string) {
+        if (file)
+            return this.xlsxService.importDataByExportTemplate(file.buffer, formId)
+        else return ResponseUtil.error('no file')
+    }
+
+    @Post('exportAssetsPdf/:formId')
+    async exportAssetsPdf(@Body() dto: ExportPdfDto, @Param('formId') formId: string, @Res() res: Response) {
+        if (!dto.status) {
+            dto.status = ['end', 'import']
+        }
+        const filePath = await this.formService.exportAssetsPdf(formId, dto, new PageQueryVo(dto.size || 1000, dto.page || 0))
+        const rs = fs.createReadStream(filePath)
+        rs.on('data', chunk => {
+            res.write(chunk, 'binary')
+        })
+        rs.on('end', () => {
+            fs.unlinkSync(filePath)
+            res.end()
+        })
     }
 
 

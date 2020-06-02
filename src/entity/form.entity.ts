@@ -117,5 +117,6 @@ export default class Form extends Model {
     qrCode: boolean
     @Column
     cancelAbel: boolean
-
+    @Column({defaultValue:false})
+    assetsFrom: boolean
 }

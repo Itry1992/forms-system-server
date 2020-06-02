@@ -29,4 +29,9 @@ export class PageQueryVo {
         return this.page * this.size;
     }
 
+    toSequelizeOpt (){
+        return {limit: this.limit() , offset: this.offset()}
+    }
+
+
 }

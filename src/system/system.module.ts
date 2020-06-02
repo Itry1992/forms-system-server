@@ -25,14 +25,16 @@ import {FormCommentController} from "./controller/form.comment.controller";
 import {XlsxService} from "./service/xlsx.service";
 import {RoleController} from "./controller/role.controller";
 import {RoleService} from "./service/role.service";
+import {TestController} from "./controller/test.controller";
+import {PdfService} from "./service/pdf.service";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
         ProcedureController, FileController, FormTodoController, FormDataController, FormLogController, FormCommentController,
-        RoleController],
+        RoleController,TestController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
-        FileService, FormTodoService, FormDataService, XlsxService, RoleService]
+        FileService, FormTodoService, FormDataService, XlsxService, RoleService,PdfService]
     , imports: [AuthModule]
 })
 export class SystemModule {

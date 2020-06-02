@@ -14,10 +14,14 @@ import FormTodo from "../../entity/form.todo.entity";
 import ProcedureNode from "../../entity/procedure.node.entity";
 import Role from "../../entity/Role.entity";
 import {analyzeScope} from "@typescript-eslint/parser/dist/analyze-scope";
+import {ExportPdfDto} from "../dto/export.pdf.dto";
+import FormData from "../../entity/form.data.entity";
+import {PdfService} from "./pdf.service";
 
 @Injectable()
 export class FormService {
-    constructor(private readonly procedureService: ProcedureService) {
+    constructor(private readonly procedureService: ProcedureService,
+                private readonly pdfService: PdfService) {
     }
 
     async list(pageQueryVo: PageQueryVo, name: string, deptIds: string[], roles: Role[]) {
@@ -86,6 +90,7 @@ export class FormService {
 
     async toSubmit(form: Form, nodeId?: string) {
         if (form.type === 'flow') {
+            //流程节点使用 初始节点
             const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
             //item filter
             if (procedure && procedure.nodes) {
@@ -161,12 +166,12 @@ export class FormService {
                 writeAbleUserId: {[Op.contains]: [user.id]},
                 writeAbleDeptId: {[Op.contains]: [user.depts[0].id]},
                 // [Op.]
-                writeAbleRoleId: {[Op.overlap]: user.roles.map((r)=>r.id)},
+                writeAbleRoleId: {[Op.overlap]: user.roles.map((r) => r.id)},
             }
         } else {
             whereOpt[Op.or] = {
                 writeAbleUserId: {[Op.contains]: [user.id]},
-                writeAbleRoleId: {[Op.overlap]: user.roles.map((r)=>r.id)},
+                writeAbleRoleId: {[Op.overlap]: user.roles.map((r) => r.id)},
             }
         }
 
@@ -180,5 +185,24 @@ export class FormService {
                 attributes: ['id', 'name']
             }]
         })
+    }
+
+    async exportAssetsPdf(formId: string, dto: ExportPdfDto, pageQueryVo: PageQueryVo) {
+        const formP = Form.findByPk(formId)
+
+        const where: any = {}
+        if (dto.status) {
+            where.endData = dto.status
+        }
+        where.formId = formId
+        const data = await FormData.findAll({
+            ...pageQueryVo.toSequelizeOpt(),
+            where
+        })
+        const form: Form = await formP
+        if (!form)
+            throw new BadRequestException('error id')
+        const itmes = form.items.filter((i) => dto.itemIds.includes(i.id))
+        return this.pdfService.gen(form, itmes, data, dto.baseUrl)
     }
 }

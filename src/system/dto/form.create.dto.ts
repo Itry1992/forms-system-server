@@ -7,4 +7,5 @@ export class FormCreateDto {
     @ApiHideProperty()
     status? : string
     deptId?: string
+    assetsFrom: boolean
 }

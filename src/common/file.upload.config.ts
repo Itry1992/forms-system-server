@@ -2,7 +2,9 @@ export const FileUploadUrl = {
     devUrl:'F:\\jtupload\\formdata',
     proUrl:'E:/upload/formdata',
     devDownUrl:'http://192.168.0.104:3001/file/get',
-    proDownUrl:'http://forms.jtinfo.top/api/file/get'
+    proDownUrl:'http://forms.jtinfo.top/api/file/get',
+    // devBaseUrl:'http://localhost:8000/mobile/',
+    //
 }
 
 export class FileUploadConfig {
