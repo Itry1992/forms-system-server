@@ -1,14 +1,11 @@
 import {Controller, Get, Param, Query, Req, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {FormTodoService} from "../service/form.todo.service";
-import FormTodo from "../../entity/form.todo.entity";
-import {Op} from "sequelize";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import {ResponseUtil} from "../../common/response.util";
 import {AdminGuard} from "../../auth/admin.guard";
-import {domainToUnicode} from "url";
 import {FormDataService} from "../service/form.data.service";
 
 @Controller('/formTodo')

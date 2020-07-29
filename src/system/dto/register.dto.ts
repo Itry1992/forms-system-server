@@ -6,6 +6,6 @@ export class RegisterDto {
     name: string
     @ApiProperty({description: '角色额外注册信息 任意json数据'})
     registerData: any
-    roleId: string
+    roleId: string[]
     deptId: string
 }

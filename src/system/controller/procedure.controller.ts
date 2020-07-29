@@ -66,6 +66,8 @@ export class ProcedureController {
         }
         if (procedure.edges) {
             const form: Form = await Form.findByPk(formId)
+            if (!form)
+                throw new BadRequestException('错误表单id')
             const itemIds = form.items.map((i) => {
                 return i.id
             })

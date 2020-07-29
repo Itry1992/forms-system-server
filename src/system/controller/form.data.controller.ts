@@ -1,4 +1,4 @@
-import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, UseGuards} from "@nestjs/common";
+import {BadRequestException, Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
 import {PageQueryVo} from "../../common/pageQuery.vo";
@@ -19,6 +19,8 @@ import ProcedureNode from "../../entity/procedure.node.entity";
 import {Op, where} from "sequelize";
 import {FormDataQueryDto} from "../dto/form.data.query.dto";
 import Role from "../../entity/Role.entity";
+import {FormDataPdfExportDto} from "../dto/form.data.pdf.export.dto";
+import * as fs from "fs";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -43,6 +45,7 @@ export class FormDataController {
         const res: any = ResponseUtil.page(data)
         res.items = form.items
         res.qrCode = form.qrCode
+        res.assetsFrom = form.assetsFrom || false
         return res
     }
 
@@ -271,7 +274,28 @@ export class FormDataController {
         res.items.unshift({title: '盘点人', type: 'singText', id: 'checkUserName'})
         res.items.unshift({title: '盘点时间', type: 'singText', id: 'checkTime'})
         res.qrCode = form.qrCode
+        res.assetsFrom = form.assetsFrom || false
         return res
+    }
+
+    @Get('/signGroup/:formId')
+    async signGroup(@Param('formId') formId: string) {
+        return ResponseUtil.success(await this.formDataService.getSignGroup(formId))
+    }
+
+    @Post('pdfByTemplate')
+    async exportByTemplate(@Body() dto: FormDataPdfExportDto, @Res() res) {
+        if (dto.templateType === 'meeting') {
+            const filePath = await this.formDataService.exportMeetingPdf(dto.formDataId, dto.itemIds, dto.title, dto.signGroup)
+            const rs = fs.createReadStream(filePath)
+            rs.on('data', chunk => {
+                res.write(chunk, 'binary')
+            })
+            rs.on('end', () => {
+                fs.unlinkSync(filePath)
+                res.end()
+            })
+        }
     }
 
 

@@ -31,7 +31,7 @@ export class AuthService {
             }]
         });
         if (user) {
-            return await this.login({account, pwd}, user);
+            return  this.login({account, pwd}, user);
         }
         return {success: false, message: '用户名或密码错误'};
     }

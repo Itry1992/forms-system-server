@@ -64,6 +64,7 @@ export default class ProcedureNode extends Model {
     // itemId:brief,
     // a:c
 
+
     @Column
     suggest?: boolean;//文本意见;
     @Column
@@ -81,6 +82,11 @@ export default class ProcedureNode extends Model {
     @Column
     bluksubmit?: boolean;//批量提交
 
+    @Column({defaultValue: 'any'})
+    submitRule?: 'any' | 'all'
+    @Column
+    signGroup: string
+
     @ForeignKey(() => Procedure)
     procedureId: string
 
@@ -91,7 +97,7 @@ export default class ProcedureNode extends Model {
     nextEdge: ProcedureEdge[]
 
     @ApiHideProperty()
-    selectMode: {name: string, id: string ,type:'dept'|'user'|'role'|'dynamicUser'|'dynamicRole'}[]
+    selectMode: { name: string, id: string, type: 'dept' | 'user' | 'role' | 'dynamicUser' | 'dynamicRole' }[]
 
 
 }

@@ -39,17 +39,27 @@ export default class FormTodo extends Model {
     })
     targetDeptIdWhitRole: string[]
 
-    @Column({defaultValue:false})
+    @Column({defaultValue: 'any'})
+    submitRule?: 'any' | 'all'
+
+    @Column
+    signGroup: string
+
+    @Column({type: DataType.ARRAY(DataType.JSONB)})
+    submitters: { id: string, name: string, submitTime: string, handSign: { uid: string, url: string, status: string } }[]
+    @Column({type: DataType.ARRAY(DataType.STRING)})
+    submitterId: string[]
+    @Column({defaultValue: false})
     onlySigned: boolean
     @Column
     dealUserId: string
 
-    @ForeignKey(()=>Form)
+    @ForeignKey(() => Form)
     formId: string
 
-    @BelongsTo(()=>Form)
+    @BelongsTo(() => Form)
     @ApiHideProperty()
-    form:Form
+    form: Form
 
     @Column
     preTodoId: string

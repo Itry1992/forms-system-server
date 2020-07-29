@@ -5,19 +5,10 @@ import User from "./User.entity";
 
 @Table
 export default class DeptUsersEntity  extends Model{
-    @PrimaryKey
-    @Column({
-        defaultValue:UUIDV4
-    })
-    id:string
 
     @ForeignKey(()=>Dept)
     deptId: string
 
     @ForeignKey(()=>User)
     userId: string
-
-    // // @HasMany(()=>Role)
-    // @Column({type:DataType.ARRAY(DataType.STRING)})
-    // roleIds: string[]
 }

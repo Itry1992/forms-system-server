@@ -15,7 +15,7 @@ export class FileService {
         const parentFile = `${uploadFile}/${moment().format('YYMMDD')}`;
         // Fs.
         if (!Fs.existsSync(parentFile)) {
-            Fs.mkdirSync(parentFile);
+            Fs.mkdirSync(parentFile,{recursive:true});
         }
         const rParentPath = `${moment().format('YYMMDD')}`
         // console.log(file);
@@ -28,7 +28,7 @@ export class FileService {
         let rThumbPath = ''
         if (file.mimetype.includes('image/')) {
             if (!Fs.existsSync(parentFile+'/thumb')) {
-                Fs.mkdirSync(parentFile+'/thumb');
+                Fs.mkdirSync(parentFile+'/thumb',{recursive:true});
             }
             rThumbPath = rParentPath + '/thumb/' + uuid.v1() + this.getFileprx(file.originalname)
             images(file.buffer).resize(600).save(uploadFile + '/' + rThumbPath, {               //Save the image to a file, with the quality of 50

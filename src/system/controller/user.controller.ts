@@ -8,7 +8,6 @@ import {
     Post,
     Query, Req,
     UseGuards,
-    UsePipes
 } from "@nestjs/common";
 import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {PageVoPipe} from "../../common/PageVoPipe";
@@ -21,6 +20,7 @@ import Dept from "../../entity/Dept.entity";
 import {RoleService} from "../service/role.service";
 import {JwtAuthGuard} from "../../auth/auth.guard";
 import {DeptService} from "../service/dept.service";
+import {ConfigService} from "../../common/config.service";
 
 @ApiTags('user')
 @Controller('/user')
@@ -56,12 +56,16 @@ export class UserController {
 
     @Get('/toRegister/:deptId')
     async toRegister(@Param('deptId') deptId: string) {
-        const dept: Dept = await Dept.findByPk(deptId)
-        if (!dept)
-            throw new BadRequestException('error deptId')
-        const roleTree = await this.roleService.list(dept.rootId === '0' ? dept.id : dept.rootId)
-        const deptTree = await this.deptService.findNext(dept.rootId === '0' ? dept.id : dept.rootId)
-        return ResponseUtil.success({roleTree,deptTree})
+        let rootId
+        if (deptId) {
+            const dept: Dept = await Dept.findByPk(deptId)
+            rootId = dept.rootId === '0' ? dept.id : dept.rootId
+        } else {
+            rootId = ConfigService.getField('rootDeptId')
+        }
+        const roleTree = await this.roleService.list(rootId)
+        const deptTree = await this.deptService.findNext(rootId)
+        return ResponseUtil.success({roleTree, deptTree})
     }
 
     @Post('/register')
@@ -74,6 +78,15 @@ export class UserController {
     async sign(@Req() req) {
         User.update({signTime: new Date()}, {where: {id: req.user.id}})
         return ResponseUtil.success()
+    }
+
+    @Post('updatePwd')
+    @UseGuards(JwtAuthGuard)
+    async UpdatePwd(@Body() ps: { oldPwd: string, newPwd: string }, @Req() req) {
+        if (req.user?.pwd && ps.oldPwd === req.user.pwd) {
+            return ResponseUtil.success(await User.update({pwd: ps.newPwd}, {where: {id: req.user.id}}))
+        }
+        throw new BadRequestException('错误的密码')
     }
 
 

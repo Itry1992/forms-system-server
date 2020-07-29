@@ -92,8 +92,9 @@ export class FormController {
                 formId: id
             }
         })
-        const data = await this.formService.detail(id)
-        return {success: true, data, hasData: !!todo}
+        const data: Form = await this.formService.detail(id)
+
+        return {success: true, data, hasData: !!todo, assetsFrom: data.assetsFrom}
     }
 
     @Post('/add')
@@ -124,6 +125,9 @@ export class FormController {
             form.items.forEach((item) => {
                 if (!item.id)
                     throw new BadRequestException(' has item with no id')
+                if (item.type===''){
+
+                }
             })
         }
         await this.formService.update(formId, form)
@@ -139,7 +143,7 @@ export class FormController {
             throw new BadRequestException('对应表单不存在')
         }
         const user = await this.authService.getUserByHeader(req)
-        if (form.publicUrl==='0' && !user?.id)
+        if (form.publicUrl === '0' && !user?.id)
             throw new BadRequestException('jwt expired')
         const res = await this.formService.toSubmit(form)
         form.items = res.items

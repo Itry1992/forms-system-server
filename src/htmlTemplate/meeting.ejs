@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议纪要模版</title>
+</head>
+<style type="text/css">
+    body {
+        text-align: left;
+    }
+
+    /*ul {*/
+    /*    list-style: none;*/
+    /*    display: inline-block;*/
+    /*}*/
+
+    h3 {
+        width: 80%;
+        display: inline-block;
+        text-align: center;
+        padding-left: 10%;
+    }
+
+    ul {
+        /*text-align: start;*/
+        list-style: none;
+        /*padding-inline-end: 40px;*/
+    }
+
+    li {
+        text-align: left;
+        margin-top: 15px;
+    }
+
+    div {
+        width: 80%;
+        text-align: left;
+        padding-left: 10%
+    }
+
+    center {
+        padding: 20px;
+    }
+</style>
+
+<body>
+
+<h3><%= title %></h3>
+
+<div>
+    <ul>
+        <% items.forEach( it=>{ %>
+            <% let v = data[it.id] %>
+            <% if (v) {
+                if (Array.isArray(v))
+                    v = v.join(',')
+                else if (typeof v === 'string')
+                    v = v
+                else
+                    v = JSON.stringify(v)
+            } else
+                v = ''
+            %>
+            <li><span> <label><strong><%= it.title %>：</strong></label> <span><%= v %></span> </span></li>
+
+        <% }) %>
+
+        <% if(sign && sign.length > 0) { %>
+            <div style="margin-top: 15px;width: 100%;padding-left: 0">
+                <span> <label><strong>签名：</strong></label> <span><%= signName.join(' ') %></span> </span>
+            </div>
+            <div style="margin-top: 15px;width: 100%;padding-left: 0">
+                <span> <label><strong>签名图:</strong></label> <span></span> </span>
+                <% sign.forEach((i)=>{ %>
+                    <img src="<%= i.url %>" style="height: 100px"/>
+                <% }) %>
+            </div>
+        <% } %>
+    </ul>
+</div>
+<p>
+<div style="text-align: right"><%= deptName %>></div>
+<div style="text-align: right"><%= createTime %></div>
+</p>
+</body>
+
+</html>

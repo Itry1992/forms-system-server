@@ -31,7 +31,7 @@ export class FileController {
     async addBase64Url(@Body() d: Base64UploadDto) {
         const basePath = FileUploadConfig.getUrl()
         if (!fs.existsSync(basePath + '/handSign')) {
-            fs.mkdirSync(basePath + '/handSign');
+            fs.mkdirSync(basePath + '/handSign', {recursive: true});
         }
         const r = uuid.v1()
         const filePath = basePath + '/handSign/' + r + '.jpg'

@@ -91,7 +91,7 @@ export class FormService {
     async toSubmit(form: Form, nodeId?: string) {
         if (form.type === 'flow') {
             //流程节点使用 初始节点
-            const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
+            const procedure: Procedure = await this.procedureService.detailByFormId(form.id , true)
             //item filter
             if (procedure && procedure.nodes) {
                 const targetNode = procedure.nodes.find((node) => {
@@ -203,6 +203,7 @@ export class FormService {
         if (!form)
             throw new BadRequestException('error id')
         const itmes = form.items.filter((i) => dto.itemIds.includes(i.id))
-        return this.pdfService.gen(form, itmes, data, dto.baseUrl)
+        return this.pdfService.genAssetPdf(form, itmes, data, dto.baseUrl)
     }
+
 }

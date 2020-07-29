@@ -73,7 +73,7 @@ export class ProcedureService {
         });
     }
 
-    async detailByFormId(id: string) {
+    async detailByFormId(id: string, noDetail?: boolean) {
         let p: any = await Procedure.findOne({
             where: {
                 formId: id,
@@ -85,6 +85,8 @@ export class ProcedureService {
                 model: ProcedureEdge
             }]
         })
+        if (noDetail)
+            return p
         if (p) {
             p = p.get({plain: true})
             const ids = p.nodes.reduce((per, c) => {

@@ -55,11 +55,13 @@ export class FormTodoService {
             //如果没签到 只能查看不需要签到 代办事项
             statusOpt.onlySigned = false
         }
+
         return FormTodo.findAndCountAll({
             where: {
                 type: type,
-                [Op.or]:orOpts,
-                ...statusOpt
+                [Op.or]: orOpts,
+                ...statusOpt,
+                [Op.and]: Sequelize.literal(`(submitter_id is null or submitter_id @> array['${user.id}']::varchar[] is false)`)
             },
             limit: pageQueryVo.getSize(),
             offset: pageQueryVo.offset(),
@@ -165,7 +167,7 @@ export class FormTodoService {
             include: [{model: Form, attributes: ['id', 'name'], required: true}],
             group: [Sequelize.col('form_id'), Sequelize.col('form.id'), Sequelize.col('form.name'),],
             where: {
-                [Op.or]:orOpts,
+                [Op.or]: orOpts,
                 ...statusOpt,
                 type
             },

@@ -11,6 +11,6 @@ export class FormDataQueryDto extends PageQueryVo {
 
 export interface FliedQuery {
     id: string
-    method: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'null' | 'notNull' | 'overlap'
+    method: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'null' | 'notNull' | 'overlap'|'hasAnyOne'
     value: any
 }

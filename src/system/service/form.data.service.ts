@@ -1,4 +1,4 @@
-import {BadRequestException, Get, HttpException, Injectable, Param} from "@nestjs/common";
+import {BadRequestException, Get, HttpException, Injectable, Param, Query} from "@nestjs/common";
 import {PageQueryVo} from "../../common/pageQuery.vo";
 import FormData from "../../entity/form.data.entity";
 import Form from "../../entity/form.entity";
@@ -14,18 +14,29 @@ import {and, Op, where} from "sequelize";
 import LogProcedure from "../../entity/log.procedure.entity";
 import {FormDataSubmitDto} from "../dto/form.data.submit.dto";
 import ProcedureNode from "../../entity/procedure.node.entity";
-import {Sequelize} from "sequelize-typescript";
+import {Column, Sequelize} from "sequelize-typescript";
 import {FormDataQueryDto} from "../dto/form.data.query.dto";
 import {ArrayUtil} from "../../common/util/array.util";
 import FormDataAttach from "../../entity/form.data.attach.entity";
 import moment from "moment";
 import {FormItemInterface} from "../../entity/JSONDataInterface/FormItem.interface";
+import DeptUsersEntity from "../../entity/dept.users.entity";
+import RoleUser from "../../entity/role.user.entity";
+import Role from "../../entity/Role.entity";
+import Dept from "../../entity/Dept.entity";
+import {Transaction} from "sequelize/types/lib/transaction";
+import {PdfService} from "./pdf.service";
+import {FileUploadConfig} from "../../common/file.upload.config";
+import path from "path";
+import Attachment from "../../entity/attachment.entity";
+import * as fs from "fs";
 
 
 @Injectable()
 export class FormDataService {
     constructor(private readonly procedureService: ProcedureService,
-                private readonly formTodoService: FormTodoService) {
+                private readonly formTodoService: FormTodoService,
+                private readonly pdfService: PdfService) {
     }
 
     async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto) {
@@ -46,6 +57,9 @@ export class FormDataService {
             dto.fliedQuery.forEach((q) => {
                 if (q.method && q.value) {
                     dataWhere[q.id] = this.toQueryOpt(q.method, q.value, dto.status)
+                }
+                if (q.method === 'hasAnyOne' && q.value) {
+                    Sequelize.literal('data ->${q.id}')
                 }
             })
             whereOptions.data = dataWhere
@@ -76,7 +90,7 @@ export class FormDataService {
         if (formData?.form.type === 'flow') {
             throw new BadRequestException('流程表单不可更新')
         }
-        return {from: formData.form}
+        return {form: formData.form, status: '4', data: formData.data, formDataId: id}
     }
 
     async update(data: any, id: string) {
@@ -88,7 +102,7 @@ export class FormDataService {
             throw new BadRequestException('流程表单不可更新')
         }
         await this.verifyUnique(formData.form, data, false, formData.id)
-        return FormData.update({data}, {
+        return FormData.update({data: data.data}, {
             where: {id},
         })
     }
@@ -107,7 +121,7 @@ export class FormDataService {
             const logData: any = {}
             //流程表单
             logData.formId = form.id
-            const procedure: Procedure = await this.procedureService.detailByFormId(form.id)
+            const procedure: Procedure = await this.procedureService.detailByFormId(form.id, true)
             if (procedure?.status === '2') {
                 throw  new BadRequestException('流程已被禁用')
             }
@@ -130,28 +144,45 @@ export class FormDataService {
                 formData.endData = 'start'
                 logData.action = startNode.name
             } else {
-                //盘对流程是否结束
-                //不是初次提交 根据todo进行流程审批
-                const todo: FormTodo = await FormTodo.findByPk(dataDto.todoId, {
-                    include: [{
-                        model: ProcedureEdge
-                    }]
-                })
-                if (!todo || todo.status === '2') {
-                    throw new BadRequestException('该代办事项不存在 或者 已被处理');
-                }
-                logData.groupId = todo.formDataGroup
-                formData.dataGroup = todo.formDataGroup
-                formData.todoId = todo.id
                 if (!user) {
                     throw new BadRequestException('未登陆，审核节点请先登陆')
                 }
-                formData.submitUserId = user.id
-                formData.submitUserName = user.name
-                if (!todo.edge) {
-                    logData.result = '对应流转条件已经删除'
-                    LogProcedure.create(logData)
-                    throw new BadRequestException('对应流转条件已经删除')
+                //盘对流程是否结束
+                //不是初次提交 根据todo进行流程审批
+                const t: Transaction = await FormTodo.sequelize.transaction()
+                let todo: FormTodo;
+                try {
+                    todo = await FormTodo.findByPk(dataDto.todoId, {
+                        include: [{
+                            model: ProcedureEdge,
+                        }],
+                        lock: {level: t.LOCK.UPDATE, of: FormTodo}
+                    })
+                    if (!todo || todo.status === '2') {
+                        throw new BadRequestException('该代办事项不存在 或者 已被处理');
+                    }
+                    logData.groupId = todo.formDataGroup
+                    formData.dataGroup = todo.formDataGroup
+                    formData.todoId = todo.id
+
+                    formData.submitUserId = user.id
+                    formData.submitUserName = user.name
+                    // if (!todo.edge) {
+                    //     logData.result = '对应流转条件已经删除'
+                    //     LogProcedure.create(logData)
+                    //     throw new BadRequestException('对应流转条件已经删除')
+                    // }
+                    if (todo.submitRule === 'all') {
+                        const allSubmit = await this.allSubmitHandle(todo, t, user, dataDto.handWritten)
+                        if (allSubmit === false) {
+                            await t.commit();
+                            return;
+                        }
+                    }
+                    await t.commit()
+                } catch (e) {
+                    t.rollback();
+                    throw e;
                 }
                 const oldData: FormData = await FormData.findOne({
                     where: {
@@ -159,6 +190,7 @@ export class FormDataService {
                         dataGroup: todo.formDataGroup
                     }
                 })
+
                 // if (oldData && oldData.endData === 'end') {
                 //     throw new BadRequestException('该流程已经结束，请刷新代办事项列表')
                 // }
@@ -172,8 +204,11 @@ export class FormDataService {
                 }
                 if (dataDto.suggest)
                     formData.suggest = dataDto.suggest
-                if (dataDto.handWritten)
+                if (dataDto.handWritten && todo.submitRule === 'any')
                     formData.handWritten = dataDto.handWritten
+                // else {
+                //     formData.handWritten =
+                // }
                 formData.endData = 'task'
                 formData.currentProcedureNodeId = todo.edge.target
 
@@ -346,10 +381,10 @@ export class FormDataService {
                 //代办事项
                 const todoRow = {
                     status: targetNode.clazz === 'receiveTask' ? '2' : '1',
-                    targetUserId: this.getTodoTargetUser(targetNode, formData),
-                    targetDeptId: targetNode && targetNode.assignDept,
-                    targetRoleId: targetNode && targetNode.assignRole,
-                    targetDeptIdWhitRole: targetNode.dynamic?.submitterDeptRoles?.map((roleID) => formData.createUserDeptId + ":" + roleID),
+                    targetUserId: targetNode.submitRule === 'all' ? await this.getAllTargetUser(targetNode, formData.createUserId, formData.createUserDeptId) : await this.getTodoTargetUser(targetNode, formData),
+                    targetDeptId: targetNode.submitRule === 'all' ? null : (targetNode && targetNode.assignDept),
+                    targetRoleId: targetNode.submitRule === 'all' ? null : (targetNode && targetNode.assignRole),
+                    targetDeptIdWhitRole: targetNode.submitRule === 'all' ? null : targetNode.dynamic?.submitterDeptRoles?.map((roleID) => formData.createUserDeptId + ":" + roleID),
                     onlySigned: targetNode.onlyExtra?.sign || false,
                     formId: form.id,
                     formTitle: form.name,
@@ -357,8 +392,10 @@ export class FormDataService {
                     createUser: formData.createUserName || '',
                     createUserId: formData.createUserName || '',
                     briefData,
+                    submitRule: targetNode.submitRule,
                     nodeName: targetNode.label,
                     type: targetNode.clazz,
+                    signGroup: targetNode.signGroup,
                     //edge
                     edgeId: targetEdge.id,
                     preTodoId: dataDto.todoId || '0'
@@ -389,20 +426,22 @@ export class FormDataService {
                 await this.endFlow(form.id, formData.dataGroup, formData.currentProcedureNodeId, user, formData, receiveTaskTodo)
                 return '流程结束';
             }
-            const ps = []
-            if (dataDto.todoId) {
-                ps.push(FormTodo.update({status: '2', dealUserId: user.id}, {
-                    where: {id: dataDto.todoId}
-                }))
-            }
+
             await FormData.sequelize.transaction(t => {
+                // throw new BadRequestException('121')
+                const ps = []
+                if (dataDto.todoId) {
+                    ps.push(FormTodo.update({status: '2', dealUserId: user.id}, {
+                        where: {id: dataDto.todoId}, transaction: t
+                    }))
+                }
                 return Promise.all([
                     //处理老代办事项 修改状态
                     ...ps,
                     //创建代办事项
-                    this.formTodoService.bulkCreate([...userTaskTodo, ...receiveTaskTodo]),
+                    FormTodo.bulkCreate([...receiveTaskTodo, ...userTaskTodo], {transaction: t}),
                     //创建 formData
-                    FormData.create(formData)
+                    FormData.create(formData, {transaction: t})
                 ])
             })
             return '提交成功'
@@ -506,6 +545,7 @@ export class FormDataService {
             const item = form.items.find((i) => {
                 return i.id === condition.itemId
             })
+            let itemValue = dataDto.data[condition.itemId]
             switch (condition.conditionsRule) {
                 case 'equal':
                     let res = false
@@ -565,6 +605,65 @@ export class FormDataService {
                         throw new BadRequestException('error type of' + item.title, 'new array of string')
                     }
                     return res6
+                case 'includeAny':
+                    let res7 = false
+                    if (!Array.isArray(condition.conditionsValue)) {
+                        throw new BadRequestException('conditionsValue must be an array')
+                    }
+                    const value = dataDto.data[condition.itemId]
+                    if (Array.isArray(value)) {
+                        res7 = !ArrayUtil.hasUnion(value, condition.conditionsValue)
+                    } else {
+                        res7 = !condition.conditionsValue.includes(value)
+                    }
+                    if (res7) {
+                        rReason.push(item.title + ' 需要是' + condition.conditionsValue.join(',') + '中的任意一个')
+                    }
+                    return res7
+                case  'lte':
+                    let res8 = false
+                    if (typeof condition.conditionsValue === "string") {
+                        condition.conditionsValue = parseFloat(condition.conditionsValue)
+                    }
+                    if (typeof itemValue === 'string')
+                        itemValue = parseFloat(itemValue)
+                    res8 = itemValue > condition.conditionsValue
+                    if (res8)
+                        rReason.push(item.title + ' 需要小于等于' + condition.conditionsValue)
+                    return res8
+                case 'gte':
+                    let res9 = false
+                    if (typeof condition.conditionsValue === "string") {
+                        condition.conditionsValue = parseFloat(condition.conditionsValue)
+                    }
+                    if (typeof itemValue === 'string')
+                        itemValue = parseFloat(itemValue)
+                    res9 = itemValue < condition.conditionsValue
+                    if (res9)
+                        rReason.push(item.title + ' 需要大于等于' + condition.conditionsValue)
+                    return res9
+                case  'lt':
+                    let res10 = false
+                    if (typeof condition.conditionsValue === "string") {
+                        condition.conditionsValue = parseFloat(condition.conditionsValue)
+                    }
+                    if (typeof itemValue === 'string')
+                        itemValue = parseFloat(itemValue)
+                    res10 = itemValue >= condition.conditionsValue
+                    if (res10)
+                        rReason.push(item.title + ' 需要小于' + condition.conditionsValue)
+                    return res10
+                case 'gt':
+                    let r11 = false
+                    if (typeof condition.conditionsValue === "string") {
+                        condition.conditionsValue = parseFloat(condition.conditionsValue)
+                    }
+                    if (typeof itemValue === 'string')
+                        itemValue = parseFloat(itemValue)
+                    r11 = itemValue <= condition.conditionsValue
+                    if (r11)
+                        rReason.push(item.title + ' 需要大于' + condition.conditionsValue)
+                    return r11
                 default:
                     throw new BadRequestException('未定义的提交校验条件')
             }
@@ -723,5 +822,129 @@ export class FormDataService {
             return formData
         })
         return page
+    }
+
+
+    //直接淘汰targetdept and targetrole
+    async getAllTargetUser(node: ProcedureNode, createUserId: string, createUserDeptId: string) {
+        const ps = []
+        if (node.assignDept && node.assignDept?.length >= 1) {
+            ps.push(DeptUsersEntity.findAll({where: {deptId: {[Op.in]: node.assignDept}}}).then((res: DeptUsersEntity[]) => {
+                return res.map((r) => r.userId)
+            }))
+        }
+        if (node.assignRole && node.assignRole?.length > 0) {
+            ps.push(RoleUser.findAll({where: {roleId: {[Op.in]: node.assignRole}}}).then(res => {
+                return res.map((r) => r.userId)
+            }))
+        }
+        if (node.dynamic?.submitterDeptRoles && node.dynamic?.submitterDeptRoles?.length > 0) {
+            ps.push(User.findAll({
+                attributes: ['id'],
+                include: [{
+                    model: Role,
+                    required: true,
+                    attributes: ['id'],
+                    where: {id: {[Op.in]: node.dynamic.submitterDeptRoles}}
+
+                }, {
+                    model: Dept,
+                    required: true,
+                    attributes: ['id'],
+                    where: {id: createUserDeptId}
+                }]
+
+            }).then(res => res.map((u) => u.id)))
+        }
+        return Promise.all(ps).then((res) => {
+            let userIds: string[] = res.reduce((p: [], r) => {
+                return p.concat(r)
+                // return p
+            }, [])
+            if (!userIds)
+                userIds = []
+            if (node.dynamic?.submitter && createUserId)
+                userIds.push(createUserId)
+            if (node.assignPerson && node.assignPerson?.length > 0) {
+                userIds = userIds.concat(node.assignPerson)
+            }
+            return userIds
+        })
+    }
+
+    async allSubmitHandle(formTodo: FormTodo, t: Transaction, user: User, handSign: { uid: string, url: string, status: string }): Promise<boolean> {
+        if (!formTodo.submitters)
+            formTodo.submitters = []
+        if (!formTodo.submitterId)
+            formTodo.submitterId = []
+        if (formTodo?.submitters?.length < formTodo.targetUserId?.length) {
+            if (!formTodo.submitters.find((s) => s.id === user.id)) {
+                formTodo.submitters.push({
+                    id: user.id,
+                    name: user.name,
+                    handSign,
+                    submitTime: moment().format('YYYY-MM-DD hh:mm')
+                })
+                formTodo.submitterId.push(user.id)
+                await FormTodo.update({
+                    submitters: formTodo.submitters,
+                    submitterId: formTodo.submitterId
+                }, {where: {id: formTodo.id}, transaction: t})
+            } else
+                throw new BadRequestException('您已经处理过该流程')
+        }
+        return formTodo.submitters.length >= formTodo.targetUserId.length
+    }
+
+    // async handleBase64() {
+    //     //
+    // }
+
+    async getSignGroup(formId: string) {
+        return FormTodo.findAll({attributes: ['signGroup'], where: {formId: formId}, group: ['signGroup']})
+    }
+
+    async exportMeetingPdf(formDataId: string, itmeIds: string[], title: string, signGroup: string) {
+        const formData: FormData = await FormData.findByPk(formDataId, {
+            include: [{
+                model: Form
+            }]
+        })
+        const items = formData.form.items.filter((it) => itmeIds.includes(it.id))
+        let sign = [];
+        if (signGroup) {
+            const where: any = {
+                formId: formData.formId,
+                formDataGroup: formData.dataGroup,
+                signGroup,
+            }
+
+            const formTodos: FormTodo[] = await FormTodo.findAll({
+                where
+            })
+            const basePath = FileUploadConfig.getUrl()
+            sign = formTodos.reduce((p, c) => {
+                return c.submitters.reduce((p1, c1) => {
+                    if (Array.isArray(c1.handSign)) {
+                        p1.push({name: c1.name, aId: c1.handSign[0]?.uid})
+                    } else
+                        p1.push({name: c1.name, aId: c1.handSign.uid})
+                    return p1
+                }, p)
+                // return p
+            }, [])
+            if (sign.length > 0) {
+                const attachments: Attachment[] = await Attachment.findAll({where: {id: {[Op.in]: sign.map((i) => i.aId)}}})
+                sign.forEach((item: { name: string, aId: string, url: string }) => {
+                    const att = attachments.find((a) => a.id === item.aId)
+                    if (att)
+                        item.url = 'data:image/png;base64,' + fs.readFileSync(path.join(basePath, '/', att.localPath)).toString('base64')
+                })
+                sign = sign.filter((i) => i.url !== null)
+            }
+        }
+
+        return this.pdfService.genMeetingPdf(formData.data, items, sign, title)
+        // const
     }
 }

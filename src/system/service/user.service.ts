@@ -28,7 +28,7 @@ export class UserService {
                 required: true,
                 where: {id: deptId}
             })
-        }else {
+        } else {
             include.push({
                 association: 'depts'
             })
@@ -132,7 +132,13 @@ export class UserService {
     }
 
     async register(registerDto: RegisterDto, deptId: string) {
+        const find = await User.findOne({where: {account: registerDto.account}})
+        if (find)
+            throw new BadRequestException('该账户已存在')
+        registerDto.name = registerDto.account
         const dept: Dept = await Dept.findByPk(deptId)
+        if (!registerDto.roleId)
+            throw new BadRequestException('请选择您的角色')
         return User.sequelize.transaction(t => {
             return User.create({
                 rootDeptId: dept.rootId === '0' ? dept.id : dept.rootId,
@@ -143,12 +149,14 @@ export class UserService {
             }).then((res) => {
                 const ps = []
                 if (registerDto.roleId) {
-                    ps.push(RoleUser.create({userId: res.id, roleId: registerDto.roleId}))
+                    registerDto.roleId.forEach((id) => {
+                        ps.push(RoleUser.findOrCreate({where: {userId: res.id, roleId: id}}))
+                    })
                 }
-                return Promise.all([
-                    ...ps,
-                    DeptUsersEntity.create({userId: res.id, deptId: deptId})
-                ])
+                if (registerDto.deptId) {
+                    ps.push(DeptUsersEntity.findOrCreate({where: {userId: res.id, deptId: deptId}}))
+                }
+                return Promise.all(ps)
             })
         })
 

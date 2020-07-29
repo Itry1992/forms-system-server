@@ -85,20 +85,25 @@ export class RoleService {
     async updateAssociation(userIds: string, roleId: string) {
         return Role.sequelize.transaction(t => {
             const ids = userIds.split(',')
-            return RoleUser.findAll({
-                where: {
-                    userId: {[Op.in]: ids},
-                    roleId
-                }
-            }).then((res: RoleUser[]) => {
-                const hasIds = res.map((r) => r.userId)
-                const add = ids.filter((id) => !hasIds.includes(id))
-                if (ArrayUtil.isNotNull(add))
-                    return RoleUser.bulkCreate(add.map((s) => {
-                        return {userId: s, roleId}
-                    }))
-                return
+            return RoleUser.destroy({where: {userId: {[Op.in]: ids}, roleId: roleId}}).then(res => {
+                return RoleUser.bulkCreate(ids.map((s) => {
+                    return {userId: s, roleId}
+                }))
             })
+            // return RoleUser.findAll({
+            //     where: {
+            //         userId: {[Op.in]: ids},
+            //         roleId
+            //     }
+            // }).then((res: RoleUser[]) => {
+            //     const hasIds = res.map((r) => r.userId)
+            //     const add = ids.filter((id) => !hasIds.includes(id))
+            //     if (ArrayUtil.isNotNull(add))
+            //         return RoleUser.bulkCreate(add.map((s) => {
+            //             return {userId: s, roleId}
+            //         }))
+            //     return
+            // })
         })
 
     }

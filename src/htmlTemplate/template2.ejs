@@ -19,19 +19,21 @@
 <!--            <h3 style="line-height: 40px;margin: 0;">''</h3>-->
             <div style="height: 20px"></div>
             <% items.forEach((i)=>{ %>
-                <p style="line-height: 20px;margin: 3px;"><span style="font-weight: bold ;font-size: 15px"><%=i.title%>：</span><span><%= d[i.id] %></span></p>
+            <p style="line-height: 20px;margin: 3px;"><span
+                        style="font-weight: bold ;font-size: 15px"><%= i.title %>：</span><span><%= d[i.id] %></span></p>
             <% }) %>
-<!--            <p style="line-height: 20px;margin: 0;">资产名称：<span><%= d.title %></span></p>-->
-<!--            <p style="line-height: 20px;margin: 0;">规格编号：<span><%= d.title %></span></p>-->
-<!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
-<!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
-<!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
+            <!--            <p style="line-height: 20px;margin: 0;">资产名称：<span><%= d.title %></span></p>-->
+            <!--            <p style="line-height: 20px;margin: 0;">规格编号：<span><%= d.title %></span></p>-->
+            <!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
+            <!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
+            <!--            <p style="line-height: 20px;margin: 0;">资产编号：<span><%= d.title %></span></p>-->
         </span>
             <span style="width:155px;height: 155px;float: left;">
-            <img style="width: 150px; height: 150px; margin:5px;"src=<%= d.qrCode %>/>
+            <img style="width: 150px; height: 150px; margin:5px;" src=<%= d.qrCode %>/>
         </span>
+            <!--            <meta>-->
         </div>
-
+        <hr style="border: 1px solid #151515"/>
     <% }) %>
 <% } %>
 

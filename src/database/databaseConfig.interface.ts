@@ -1,4 +1,5 @@
 import { Options } from 'sequelize';
+import {ConfigService} from "../common/config.service";
 export interface IDatabaseOptions {
     development: Options,
     production: Options,
@@ -19,11 +20,11 @@ export const databaseConfig: IDatabaseOptions = {
     },
     production: {
         dialect: 'postgres',
-        host: '120.79.12.65',
+        host: 'localhost',
         port: 5432,
         username: 'postgres',
         password: 'admin',
-        database: 'form-data',
+        database: ConfigService.getField('dbName')||"form-data",
         timezone: '+08:00',
         pool:{
             max:100,

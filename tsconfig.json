@@ -12,6 +12,9 @@
     "baseUrl": "./",
     "incremental": true,
     "esModuleInterop": true
+//    "lib": ["./src/htmlTemplate"]
   },
   "exclude": ["node_modules", "dist"]
+//  "include": ['./']
+//  "include": "./src/**/*.ejs"
 }
