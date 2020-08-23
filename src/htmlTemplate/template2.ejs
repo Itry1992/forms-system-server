@@ -1,45 +1,34 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <style>
-        table {
-            border-collapse: collapse;
-        }
-
-        table, th, td {
-            border: 1px solid black;
-        }
-
-    </style>
 </head>
+
 <body>
-<% if (data.length > 0) { %>
+    <% if (data.length > 0) { %>
     <% data.forEach((d, index)=>{ %>
-        <% if (index % 2 === 0) { %>
-        <div style="height: 170px ;width: 100%">
-        <% } %>
-            <div style="min-height: 170px ;width: 40% ; margin: 2%;float: left">
-        <span style="min-width:150px;height: 150px;float: left;">
-<!--            <h3 style="line-height: 40px;margin: 0;">''</h3>-->
-            <div style="height: 20px"></div>
-            <% items.forEach((i)=>{ %>
-                <p style="line-height: 20px;margin: 3px;"><span
-                            style="font-weight: bold ;font-size: 15px"><%= i.title %>：</span><span><%= d[i.id] %></span></p>
-            <% }) %>
-
-        </span>
-                <span style="width:155px;height: 155px;float: left;">
-            <img style="width: 150px; height: 150px; margin:5px;" src=<%= d.qrCode %>/>
-        </span>
-                <!--            <meta>-->
-                <hr style="border: 1px solid #151515"/>
+    <div style="width: 49%; float: left">
+	
+            <!-- left text col -->
+            <div style="width:60%; float:left;">
+                <div style="height: 20px"></div>
+                <% items.forEach((i)=>{ %>
+                <div style="line-height: 20px; width: 100% ;margin: 3px; word-break:break-all; word-wrap:break-word;">
+                    <span style="font-weight: bold ;font-size: 15px"><%= i.title %>：</span><span><%= d[i.id] %></span>
+                </div>
+                <% }) %>
+            </div >
+            <!-- right qr.code col -->
+            <div style="float:right;width:33%" >
+			<div style="height: 20px"></div>
+                <img style="width: 100px; height:100px; margin:5px;" src=<%= d.qrCode %> />
             </div>
-            <% if (index % 2 === 1 || index === data.length-1) { %>
+			<div style="clear:both;height:0px;"></div>
         </div>
-        <% } %>
-
+     
     <% }) %>
-<% } %>
+    <% } %>
 
 </body>
+
 </html>

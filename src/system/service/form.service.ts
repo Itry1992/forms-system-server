@@ -17,10 +17,13 @@ import {analyzeScope} from "@typescript-eslint/parser/dist/analyze-scope";
 import {ExportPdfDto} from "../dto/export.pdf.dto";
 import FormData from "../../entity/form.data.entity";
 import {PdfService} from "./pdf.service";
+import {FormDataQueryDto} from "../dto/form.data.query.dto";
+import {FormDataService} from "./form.data.service";
 
 @Injectable()
 export class FormService {
     constructor(private readonly procedureService: ProcedureService,
+                private readonly formDataService: FormDataService,
                 private readonly pdfService: PdfService) {
     }
 
@@ -91,7 +94,7 @@ export class FormService {
     async toSubmit(form: Form, nodeId?: string) {
         if (form.type === 'flow') {
             //流程节点使用 初始节点
-            const procedure: Procedure = await this.procedureService.detailByFormId(form.id , true)
+            const procedure: Procedure = await this.procedureService.detailByFormId(form.id, true)
             //item filter
             if (procedure && procedure.nodes) {
                 const targetNode = procedure.nodes.find((node) => {
@@ -187,18 +190,28 @@ export class FormService {
         })
     }
 
-    async exportAssetsPdf(formId: string, dto: ExportPdfDto, pageQueryVo: PageQueryVo) {
+    async exportAssetsPdf(formId: string, dto: ExportPdfDto) {
+        if (!dto.itemIds) {
+            throw new BadRequestException('itemIds is need')
+        }
+        if (!dto.size) {
+            dto.size = 100
+        }
+        if (!dto.page) {
+            dto.page = 0
+        }
+
         const formP = Form.findByPk(formId)
 
-        const where: any = {}
-        if (dto.status) {
-            where.endData = dto.status
+        if (!dto?.formDataQueryDto?.status) {
+            if (dto.formDataQueryDto) {
+                dto.formDataQueryDto.status = 'import,end'
+            } else {
+                dto.formDataQueryDto = {status: "import,end"} as FormDataQueryDto
+            }
         }
-        where.formId = formId
-        const data = await FormData.findAll({
-            ...pageQueryVo.toSequelizeOpt(),
-            where
-        })
+
+        const data = await this.formDataService.list(new PageQueryVo(dto.size, dto.page), formId, dto.formDataQueryDto, true)
         const form: Form = await formP
         if (!form)
             throw new BadRequestException('error id')

@@ -234,7 +234,12 @@ export class FormController {
         const form: Form = await Form.findByPk(formId)
         if (!form)
             throw new BadRequestException('no entity form whit  this id ')
-        const data: FormData[] = (await this.formDataService.list(new PageQueryVo(1000, 0), formId, formExportDto.formDataQueryDto)).rows
+        if (!formExportDto.size) {
+            formExportDto.size = 100
+        }
+        if (!formExportDto.page)
+            formExportDto.page = 0
+        const data: FormData[] = await this.formDataService.list(new PageQueryVo(formExportDto.size, formExportDto.page), formId, formExportDto.formDataQueryDto, true)
 
         const path = await this.xlsxService.export(data, form, formExportDto)
         const rs = fs.createReadStream(path)
@@ -271,10 +276,7 @@ export class FormController {
 
     @Post('exportAssetsPdf/:formId')
     async exportAssetsPdf(@Body() dto: ExportPdfDto, @Param('formId') formId: string, @Res() res: Response) {
-        if (!dto.status) {
-            dto.status = ['end', 'import']
-        }
-        const filePath = await this.formService.exportAssetsPdf(formId, dto, new PageQueryVo(dto.size || 1000, dto.page || 0))
+        const filePath = await this.formService.exportAssetsPdf(formId, dto)
         const rs = fs.createReadStream(filePath)
         rs.on('data', chunk => {
             res.write(chunk, 'binary')

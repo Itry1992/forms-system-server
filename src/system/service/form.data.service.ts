@@ -41,7 +41,7 @@ export class FormDataService {
                 private readonly formPermissionService: FormPermissionService) {
     }
 
-    async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto) {
+    async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto, onlyList?: boolean) {
         const whereOptions: any = {}
         if (dto?.nodeId) {
             if (dto?.nodeId === 'start')
@@ -74,6 +74,19 @@ export class FormDataService {
             })
             whereOptions.data = dataWhere
         }
+        if (onlyList === true) {
+            return FormData.findAll({
+                where: {formId, ...whereOptions, [Op.and]: ands},
+                limit: pageQueryVo.getSize(),
+                offset: pageQueryVo.offset(),
+                include: [{
+                    model: ProcedureNode,
+                    attributes: ['id', 'name']
+                }],
+                order: ['createTime']
+            })
+        }
+
         return FormData.findAndCountAll({
             where: {formId, ...whereOptions, [Op.and]: ands},
             limit: pageQueryVo.getSize(),
@@ -965,7 +978,7 @@ export class FormDataService {
         const formData: FormData = await FormData.findByPk(formDataId)
         const able = await this.formPermissionService.verifyAble('delete', formData.formId, user)
         if (able) {
-            if (!formData.todoId && (formData.endData==='start' || formData.endData==='task'))
+            if (!formData.todoId && (formData.endData === 'start' || formData.endData === 'task'))
                 // FormTodo.destroy({w})
                 throw new BadRequestException('该数据处于待处理状态，无法执行删除')
             FormData.destroy({where: {id: formDataId}})

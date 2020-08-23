@@ -16,6 +16,9 @@ export class FormExportDto {
     currentProcedureNode?: boolean
     dataGroupStatus: string
 
+
+    page: number
+    size: number
     formDataQueryDto: FormDataQueryDto
 
 

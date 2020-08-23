@@ -1,10 +1,10 @@
-import {ApiProperty} from "@nestjs/swagger";
+import {FormDataQueryDto} from "./form.data.query.dto";
 
 export class ExportPdfDto {
     itemIds: string[]
-    @ApiProperty({description: 'end | start| import| task'})
-    status: string[]
     page: number
     size: number
-    baseUrl : string
+    baseUrl: string
+
+    formDataQueryDto: FormDataQueryDto;
 }
