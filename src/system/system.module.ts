@@ -27,14 +27,16 @@ import {RoleController} from "./controller/role.controller";
 import {RoleService} from "./service/role.service";
 import {TestController} from "./controller/test.controller";
 import {PdfService} from "./service/pdf.service";
+import {FormPermissionController} from "./controller/form.permission.controller";
+import {FormPermissionService} from "./service/form.permission.service";
 
 
 @Module({
     controllers: [UserController, DictController, UserDeptController, DeptController, FormController,
         ProcedureController, FileController, FormTodoController, FormDataController, FormLogController, FormCommentController,
-        RoleController,TestController],
+        RoleController, TestController, FormPermissionController],
     providers: [UserService, DictService, DeptService, SysAppService, TeamService, FormService, ProcedureService,
-        FileService, FormTodoService, FormDataService, XlsxService, RoleService,PdfService]
+        FileService, FormTodoService, FormDataService, XlsxService, RoleService, PdfService, FormPermissionService]
     , imports: [AuthModule]
 })
 export class SystemModule {

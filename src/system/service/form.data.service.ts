@@ -30,13 +30,15 @@ import {FileUploadConfig} from "../../common/file.upload.config";
 import path from "path";
 import Attachment from "../../entity/attachment.entity";
 import * as fs from "fs";
+import {FormPermissionService} from "./form.permission.service";
 
 
 @Injectable()
 export class FormDataService {
     constructor(private readonly procedureService: ProcedureService,
                 private readonly formTodoService: FormTodoService,
-                private readonly pdfService: PdfService) {
+                private readonly pdfService: PdfService,
+                private readonly formPermissionService: FormPermissionService) {
     }
 
     async list(pageQueryVo: PageQueryVo, formId: string, dto: FormDataQueryDto) {
@@ -50,7 +52,7 @@ export class FormDataService {
                 whereOptions.currentProcedureNodeId = dto?.nodeId
         }
         if (dto?.status)
-            whereOptions.endData = dto?.status
+            whereOptions.endData = {[Op.in]: dto.status.split(',')}
         const ands = []
         if (ArrayUtil.isNotNull(dto?.fliedQuery)) {
             const dataWhere: any = {}
@@ -58,9 +60,17 @@ export class FormDataService {
                 if (q.method && q.value) {
                     dataWhere[q.id] = this.toQueryOpt(q.method, q.value, dto.status)
                 }
-                if (q.method === 'hasAnyOne' && q.value) {
-                    Sequelize.literal('data ->${q.id}')
+                // and 条件
+                if (q.method === 'overlap' && q.value && Array.isArray(q.value) && q.value.length > 0) {
+                    ands.push(Sequelize.literal(`"data"->'${q.id}' ?| array[${q.value.join(',')}]`))
                 }
+                if (q.method === 'contained' && q.value && Array.isArray(q.value) && q.value.length > 0) {
+                    ands.push(Sequelize.literal(`"data"->'${q.id}' <@ '[${q.value.join(',')}]'::jsonb`))
+                }
+                if (q.method === 'overlap' && q.value && Array.isArray(q.value) && q.value.length > 0) {
+                    ands.push(Sequelize.literal(`"data"->'${q.id}' @> '[${q.value.join(',')}]'::jsonb`))
+                }
+
             })
             whereOptions.data = dataWhere
         }
@@ -77,9 +87,8 @@ export class FormDataService {
     }
 
     async add(data: any, formId: string, ip: string) {
-        //流程
-
-        return FormData.create({data, formId, submitIp: ip, endData: true})
+        //无流程处理
+        return FormData.create({data, formId, submitIp: ip, endData: 'import'})
     }
 
 
@@ -98,8 +107,8 @@ export class FormDataService {
         const formData: FormData = await FormData.findByPk(id, {include: [{model: Form}]})
         if (!formData)
             throw new BadRequestException('error id')
-        if (formData?.form.type === 'flow') {
-            throw new BadRequestException('流程表单不可更新')
+        if (formData?.todoId) {
+            throw new BadRequestException('改流程已被处理，不可更新')
         }
         await this.verifyUnique(formData.form, data, false, formData.id)
         return FormData.update({data: data.data}, {
@@ -546,124 +555,115 @@ export class FormDataService {
                 return i.id === condition.itemId
             })
             let itemValue = dataDto.data[condition.itemId]
+            let res = false
             switch (condition.conditionsRule) {
                 case 'equal':
-                    let res = false
                     res = dataDto.data[condition.itemId] !== condition.conditionsValue
                     if (res)
                         rReason.push(item.title + ' 需要等于 ' + condition.conditionsValue)
                     return res
                 case 'notEqual':
-                    let res2 = false
-                    res2 = dataDto.data[condition.itemId] === condition.conditionsValue
-                    if (res2)
+                    res = dataDto.data[condition.itemId] === condition.conditionsValue
+                    if (res)
                         rReason.push(item.title + ' 需要不等于 ' + condition.conditionsValue)
-                    return res2
+                    return res
                 case 'null':
-                    const res3 = !!dataDto.data[condition.itemId]
+                    res = !!dataDto.data[condition.itemId]
                     if (res)
                         rReason.push(item.title + ' 需要为空 ')
-                    return res3
+                    return res
                 case 'notNull':
-                    const res4 = !dataDto.data[condition.itemId]
-                    if (res4) {
+                    res = !dataDto.data[condition.itemId]
+                    if (res) {
                         console.log(dataDto.data[condition.itemId], item.title)
                         rReason.push(item.title + ' 需要为不空 ')
                     }
-                    return res4
+                    return res
                 //复选值 其值为
                 case 'include':
-                    let res5 = false
                     if (Array.isArray(dataDto.data[condition.itemId])) {
                         // dataDto.data[]
-                        res5 = !dataDto.data[condition.itemId].includes(condition.conditionsValue)
-                        if (res5) {
+                        res = !dataDto.data[condition.itemId].includes(condition.conditionsValue)
+                        if (res) {
                             rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
                         }
                     } else if (typeof dataDto.data[condition.itemId] === 'string') {
-                        res5 = !(dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
-                        if (res5)
+                        res = !(dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
+                        if (res)
                             rReason.push(item.title + ' 需要包含 ' + condition.conditionsValue)
                     } else {
                         throw new BadRequestException('error type of' + item.title, 'new array of string')
                     }
-                    return res5
-                    break
+                    return res
                 case 'exclude':
-                    let res6 = false
                     if (Array.isArray(dataDto.data[condition.itemId])) {
                         // dataDto.data[]
-                        res6 = dataDto.data[condition.itemId].includes(condition.conditionsValue)
-                        if (res6) {
+                        res = dataDto.data[condition.itemId].includes(condition.conditionsValue)
+                        if (res) {
                             rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
                         }
                     } else if (typeof dataDto.data[condition.itemId] === 'string') {
-                        res6 = (dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
-                        if (res6)
+                        res = (dataDto.data[condition.itemId] as string).includes(condition.conditionsValue)
+                        if (res)
                             rReason.push(item.title + ' 需要不包含 ' + condition.conditionsValue)
                     } else {
                         throw new BadRequestException('error type of' + item.title, 'new array of string')
                     }
-                    return res6
+                    return res
                 case 'includeAny':
-                    let res7 = false
                     if (!Array.isArray(condition.conditionsValue)) {
                         throw new BadRequestException('conditionsValue must be an array')
                     }
                     const value = dataDto.data[condition.itemId]
                     if (Array.isArray(value)) {
-                        res7 = !ArrayUtil.hasUnion(value, condition.conditionsValue)
+                        res = !ArrayUtil.hasUnion(value, condition.conditionsValue)
                     } else {
-                        res7 = !condition.conditionsValue.includes(value)
+                        res = !condition.conditionsValue.includes(value)
                     }
-                    if (res7) {
+                    if (res) {
                         rReason.push(item.title + ' 需要是' + condition.conditionsValue.join(',') + '中的任意一个')
                     }
-                    return res7
+                    return res
                 case  'lte':
-                    let res8 = false
                     if (typeof condition.conditionsValue === "string") {
                         condition.conditionsValue = parseFloat(condition.conditionsValue)
                     }
                     if (typeof itemValue === 'string')
                         itemValue = parseFloat(itemValue)
-                    res8 = itemValue > condition.conditionsValue
-                    if (res8)
+                    res = itemValue > condition.conditionsValue
+                    if (res)
                         rReason.push(item.title + ' 需要小于等于' + condition.conditionsValue)
-                    return res8
+                    return res
                 case 'gte':
-                    let res9 = false
                     if (typeof condition.conditionsValue === "string") {
                         condition.conditionsValue = parseFloat(condition.conditionsValue)
                     }
                     if (typeof itemValue === 'string')
                         itemValue = parseFloat(itemValue)
-                    res9 = itemValue < condition.conditionsValue
-                    if (res9)
+                    res = itemValue < condition.conditionsValue
+                    if (res)
                         rReason.push(item.title + ' 需要大于等于' + condition.conditionsValue)
-                    return res9
+                    return res
                 case  'lt':
-                    let res10 = false
                     if (typeof condition.conditionsValue === "string") {
                         condition.conditionsValue = parseFloat(condition.conditionsValue)
                     }
                     if (typeof itemValue === 'string')
                         itemValue = parseFloat(itemValue)
-                    res10 = itemValue >= condition.conditionsValue
-                    if (res10)
+                    res = itemValue >= condition.conditionsValue
+                    if (res)
                         rReason.push(item.title + ' 需要小于' + condition.conditionsValue)
-                    return res10
+                    return res
                 case 'gt':
-                    let r11 = false
                     if (typeof condition.conditionsValue === "string") {
                         condition.conditionsValue = parseFloat(condition.conditionsValue)
                     }
                     if (typeof itemValue === 'string')
                         itemValue = parseFloat(itemValue)
-                    r11 = itemValue <= condition.conditionsValue
-                    if (r11)
+                    res = itemValue <= condition.conditionsValue
+                    if (res)
                         rReason.push(item.title + ' 需要大于' + condition.conditionsValue)
-                    return r11
+                    return res
                 default:
                     throw new BadRequestException('未定义的提交校验条件')
             }
@@ -947,4 +947,32 @@ export class FormDataService {
         return this.pdfService.genMeetingPdf(formData.data, items, sign, title)
         // const
     }
+
+    async updateFlowData(data: FormData, user: User) {
+        if (!data?.id) {
+            throw new BadRequestException('error id')
+        }
+        const formData: FormData = await FormData.findByPk(data.id)
+        const updateAble = await this.formPermissionService.verifyAble('update', formData.formId, user)
+        //todo update log
+        if (updateAble)
+            return FormData.update(data, {where: {id: data.id}})
+        else
+            throw new BadRequestException('need updateAble permission')
+    }
+
+    async deleteFlowData(formDataId: string, user: User) {
+        const formData: FormData = await FormData.findByPk(formDataId)
+        const able = await this.formPermissionService.verifyAble('delete', formData.formId, user)
+        if (able) {
+            if (!formData.todoId && (formData.endData==='start' || formData.endData==='task'))
+                // FormTodo.destroy({w})
+                throw new BadRequestException('该数据处于待处理状态，无法执行删除')
+            FormData.destroy({where: {id: formDataId}})
+        } else
+            throw new BadRequestException('need deleteAble permisson')
+    }
+
+
+    // async
 }

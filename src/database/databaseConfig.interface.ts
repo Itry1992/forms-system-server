@@ -7,14 +7,14 @@ export interface IDatabaseOptions {
 export const databaseConfig: IDatabaseOptions = {
     development: {
         dialect: 'postgres',
-        host: 'localhost',
+        host: '120.79.12.65',
         port: 5432,
         username: 'postgres',
         password: 'admin',
-        database: 'huzhan',
+        database: 'form-data',
         timezone: '+08:00',
         pool:{
-            max:100,
+            max:5,
             min:1
         },
     },

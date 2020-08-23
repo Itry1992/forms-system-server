@@ -21,6 +21,7 @@ import {FormDataQueryDto} from "../dto/form.data.query.dto";
 import Role from "../../entity/Role.entity";
 import {FormDataPdfExportDto} from "../dto/form.data.pdf.export.dto";
 import * as fs from "fs";
+import {FormPermissionService} from "../service/form.permission.service";
 
 @Controller('/formData')
 @ApiTags('formData')
@@ -28,7 +29,8 @@ export class FormDataController {
     constructor(private readonly formDataService: FormDataService,
                 private readonly authService: AuthService,
                 private readonly formTodoService: FormTodoService,
-                private readonly formService: FormService) {
+                private readonly formService: FormService,
+                private readonly formPermissionService: FormPermissionService) {
     }
 
     @Post('/list/:formId')
@@ -100,21 +102,38 @@ export class FormDataController {
     }
 
     @Post('/add/:formId')
-    @ApiOperation({description: '用于测试以及 手动添加数据, 不会进行相应的流程管理'})
-    async create(@Body()data, @Param('formId')formId: string, @Req() req: Request) {
-        const header = req.header('Authorization')
-        if (header) {
-            // 提取当前登陆人员  待续....
-        }
+    @ApiOperation({description: '用于手动添加数据, 需要具有ipmortAble 不会进入相应的流程 并且导入数据会被标记为import 参数为数据，即{id1:xx,id2：xx}'})
+    @UseGuards(JwtAuthGuard)
+    async create(@Body()data, @Param('formId')formId: string, @Req() req) {
         const ip = req.ip
+        await this.formPermissionService.verifyAble('import', formId, req.user)
         const res = await this.formDataService.add(data, formId, ip)
         return ResponseUtil.success(res)
     }
 
     @Post('/update/:formDataId')
-    async update(@Param('formDataId') formDataId: string, @Body() data) {
+    @ApiOperation({description: '用户修改数据 暂时未作权限验证 ，参数自需要data部分'})
+    async updateNotFlow(@Param('formDataId') formDataId: string, @Body() data) {
+        // await this.formPermissionService.verifyAble('update', formDataId, req.user)
         await this.formDataService.update(data, formDataId)
         return ResponseUtil.success()
+    }
+
+    @Post('updateFlowData')
+    @ApiOperation({
+        description: '万能数据修改，但是需要具有formPermission表中的数据修改权限 ， body 结构为formData 的结构， 可以修改提交人等信息 （需要注意的是不会修改流程简报' +
+            '）  '
+    })
+    @UseGuards(JwtAuthGuard)
+    async updateFlowData(@Body() formData: FormData, @Req() req) {
+        await this.formDataService.updateFlowData(formData, req.user)
+        return ResponseUtil.success()
+    }
+
+    @Get('deleteFlowData/:formDataId')
+    @UseGuards(JwtAuthGuard)
+    async deleteFlowData(@Param('formDataId')formDataId: string, @Req() req) {
+        return ResponseUtil.success(await this.formDataService.deleteFlowData(formDataId, req.user))
     }
 
     @Post('/toUpdate/:formDataId')
@@ -248,6 +267,8 @@ export class FormDataController {
     }
 
     @Get('/delete/:id')
+    @UseGuards(JwtAuthGuard)
+    //仅能删除最终数据和导入数据
     async delete(@Param('id')id: string) {
         return ResponseUtil.success(await this.formDataService.delete(id))
     }

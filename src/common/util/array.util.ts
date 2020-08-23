@@ -1,10 +1,10 @@
 export class ArrayUtil {
-    static isNotNull(a : any[]) {
-        return a && a.length!== 0
+    static isNotNull(a: any[]) {
+        return a && a.length !== 0
     }
 
-    static isNull (a : any[]) {
-        return !a || a.length===0
+    static isNull(a: any[]) {
+        return !a || a.length === 0
     }
 
 
@@ -24,6 +24,8 @@ export class ArrayUtil {
     }
 
     static hasUnion(a: any[], b: any[]) {
+        if (!a || !b)
+            return false
         return !!a.find((v) => {
             b.includes(v)
         })

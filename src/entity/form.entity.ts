@@ -7,7 +7,7 @@ import {
     Default,
     BelongsToMany,
     DataType,
-    ForeignKey, BelongsTo
+    ForeignKey, BelongsTo, HasOne
 } from 'sequelize-typescript';
 
 import {UUIDV4} from 'sequelize';
@@ -15,6 +15,7 @@ import {ThemeInterface} from "./JSONDataInterface/theme.interface";
 import {LabelInterface} from "./JSONDataInterface/label.interface";
 import {FormItemInterface} from "./JSONDataInterface/FormItem.interface";
 import Dept from "./Dept.entity";
+import FormPermission from "./form.permission.entity";
 
 interface MemberInterface {
     id: string,
@@ -117,6 +118,10 @@ export default class Form extends Model {
     qrCode: boolean
     @Column
     cancelAbel: boolean
-    @Column({defaultValue:false})
+    @Column({defaultValue: false})
     assetsFrom: boolean
+
+    // @ForeignKey(()=>FormPermission)
+    @HasOne(() => FormPermission)
+    formPermission: FormPermission
 }

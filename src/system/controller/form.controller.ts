@@ -113,10 +113,10 @@ export class FormController {
         return ResponseUtil.success(data)
     }
 
-    // @Post('/update2/:formId')
-    // @ApiOperation
 
     @Post('/update/:formId')
+    @ApiOperation({description: '修改'})
+    @UseGuards(JwtAuthGuard)
     async update(@Body()form: Form, @Param('formId')formId: string) {
         if (ArrayUtil.isNull(form.items)) {
             throw new BadRequestException('items.length = 0')
@@ -125,9 +125,6 @@ export class FormController {
             form.items.forEach((item) => {
                 if (!item.id)
                     throw new BadRequestException(' has item with no id')
-                if (item.type===''){
-
-                }
             })
         }
         await this.formService.update(formId, form)

@@ -238,7 +238,7 @@ export class XlsxService {
         })
         //数据填装完毕 生成excel
         if (!fs.existsSync(FileUploadConfig.getUrl() + '/xlsx')) {
-            await fs.mkdirSync(FileUploadConfig.getUrl() + '/xlsx',{recursive:true});
+            await fs.mkdirSync(FileUploadConfig.getUrl() + '\\xlsx',{recursive:true});
         }
         const r = uuid.v1();
         const filePath = FileUploadConfig.getUrl() + '/xlsx/' + r + '.xlsx'

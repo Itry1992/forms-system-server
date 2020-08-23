@@ -15,6 +15,7 @@ export class ConfigService {
         if (ConfigService.configMap.get(name))
             return ConfigService.configMap.get(name)
         const evn = process.env.NODE_ENV
+        console.log("config-evn", evn,name,keyValue)
         let configFilePath = path.join(__dirname, '../../config-' + evn + '.properties')
         if (!fs.existsSync(configFilePath)) {
             configFilePath = path.join(__dirname, '../../config.properties')
@@ -36,7 +37,7 @@ export class ConfigService {
             }
             const value = keyValue.get(name);
             if (!value )
-                throw new BadRequestException('need set ' + name + ' at config.properties')
+                throw new BadRequestException('need set ' + name + ' at ' +configFilePath)
             return  value
         } catch (e) {
             //e.message  //这里根据自己的需求返回
