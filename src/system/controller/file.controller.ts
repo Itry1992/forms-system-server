@@ -63,8 +63,8 @@ export class FileController {
         // res.set('Content-Length', `${entity.size}`)
 
         let path = entity.localPath
-        if (!path.startsWith(FileUploadConfig.getUrl())) {
-            path = FileUploadConfig.getUrl() + '/' + entity.localPath
+        if (!path.startsWith(await FileUploadConfig.getUrl())) {
+            path =await FileUploadConfig.getUrl() + '/' + entity.localPath
         }
         const rs = fs.createReadStream(path)
         rs.on('data', chunk => {
@@ -74,7 +74,7 @@ export class FileController {
             res.end()
         })
         rs.on('error', error => {
-            // console.log(error)
+            // @ts-ignore
             if (error.code === 'ENOENT') {
                 res.status(200)
                     .json({
