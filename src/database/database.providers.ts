@@ -20,15 +20,15 @@ export const databaseProviders = {
         const sequelize = new Sequelize(isProduction ? databaseConfig.production : databaseConfig.development);
         // const sequelize = new Sequelize(databaseConfig.production);
         sequelize.addModels([path.resolve(__dirname, '..') + '/**/*.entity{.ts,.js}']);
-        sequelize.authenticate().then(() => {
+        sequelize.authenticate().then(async () => {
             console.log('数据库连接成功.')
+            if (isProduction)
+                await sequelize.sync({alter: true});
         })
             .catch((err: any) => {
-
                 console.error('数据库连接失败:', err)
             });
-        if (isProduction)
-            await sequelize.sync({alter: true});
+
         // FormDataAttach.sync({alter:true})
         return sequelize;
     }
